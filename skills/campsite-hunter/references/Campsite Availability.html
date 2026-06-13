@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Campsite Availability — Tyler w/Kids Windows</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 24px; background: #f5f5f5; color: #222; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  p.sub { color: #555; font-size: 13px; margin-bottom: 24px; }
+  h2 { font-size: 15px; font-weight: 600; margin: 32px 0 8px; padding: 8px 12px; background: #1a4a7a; color: #fff; border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.12); margin-bottom: 8px; font-size: 13px; }
+  thead th { background: #e8f0fe; text-align: left; padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #c5d8f7; }
+  tbody td { padding: 7px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: #f7fbff; }
+  .avail-all { background: #e6f4ea; font-weight: 600; }
+  .site { font-family: monospace; font-weight: 600; }
+  .days { text-align: center; }
+  .full { color: #1a7a3a; font-weight: 700; }
+  .partial { color: #555; }
+  .who { color: #666; font-style: italic; }
+  .note { font-size: 11px; color: #888; margin-top: 12px; }
+  .legend { display: flex; gap: 16px; margin-bottom: 20px; font-size: 12px; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .box { width: 14px; height: 14px; border-radius: 3px; }
+  .box-full { background: #e6f4ea; border: 1px solid #4caf50; }
+  .box-part { background: #fff; border: 1px solid #ddd; }
+</style>
+</head>
+<body>
+
+<h1>Campsite Availability — "Tyler w/Kids" Windows</h1>
+<p class="sub">Top-priority available site per campground per window. Source: recreation.gov API, queried April 2026. Minimum 3 available days within each window. Organized by custody window.</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="box box-full"></div> All days in window available</div>
+  <div class="legend-item"><div class="box box-part"></div> Partial availability (3+ days)</div>
+</div>
+
+<!-- WINDOW 1 -->
+<h2>Window 1 — Jun 19–23, 2026 (5 days)</h2>
+<table>
+  <thead><tr><th>Dates</th><th>Location</th><th>Length (Days)</th><th>Who</th><th>Site #</th><th>Conflicts</th></tr></thead>
+  <tbody>
+    <tr><td>Jun 19–23</td><td>Sunset Falls Campground <span style="color:#888;font-size:11px">(Gifford Pinchot)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">7</td><td></td></tr>
+    <tr><td>Jun 19–23</td><td>Clear Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">8</td><td></td></tr>
+    <tr><td>Jun 19–23</td><td>Cove Creek Campground <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">033</td><td></td></tr>
+    <tr><td>Jun 19–23</td><td>Clackamas Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">30</td><td></td></tr>
+    <tr><td>Jun 19–23</td><td>Kinnikinnick — Laurance Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">16</td><td></td></tr>
+    <tr><td>Jun 19–23</td><td>Pine Meadows <span style="color:#888;font-size:11px">(Southern OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">35</td><td></td></tr>
+    <tr><td>Jun 19–23</td><td>Princess Creek Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">23</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 19–23</td><td>Eagle Creek Campground <span style="color:#888;font-size:11px">(Columbia Gorge)</span></td><td class="days full">5 of 5 ✓</td><td class="who">w/kids</td><td class="site">6</td><td></td></tr>
+    <tr><td>Jun 19–23</td><td>Hebo Lake Campground <span style="color:#888;font-size:11px">(Oregon Coast)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">12</td><td></td></tr>
+    <tr><td>Jun 19–23</td><td>Indian Creek <span style="color:#888;font-size:11px">(Central WA)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">25</td><td></td></tr>
+    <tr><td>Jun 19–23</td><td>Little Cultus Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">26</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 19–23</td><td>Gull Point Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days full">5 of 5 ✓</td><td class="who">w/kids</td><td class="site">26</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 19–23</td><td>Packard Creek <span style="color:#888;font-size:11px">(Southern OR)</span></td><td class="days full">5 of 5 ✓</td><td class="who">w/kids</td><td class="site">32</td><td></td></tr>
+    <tr><td>Jun 19–23</td><td>Ivan Oakes Campground <span style="color:#888;font-size:11px">(Eugene)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">23</td><td></td></tr>
+  </tbody>
+</table>
+
+<!-- WINDOW 2 -->
+<h2>Window 2 — Jun 28 – Jul 1, 2026 (4 days)</h2>
+<table>
+  <thead><tr><th>Dates</th><th>Location</th><th>Length (Days)</th><th>Who</th><th>Site #</th><th>Conflicts</th></tr></thead>
+  <tbody>
+    <tr><td>Jun 28–Jul 1</td><td>Sunset Falls Campground <span style="color:#888;font-size:11px">(Gifford Pinchot)</span></td><td class="days partial">3 of 4</td><td class="who">w/kids</td><td class="site">7</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 28–Jul 1</td><td>Clear Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">15</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 28–Jul 1</td><td>Cove Creek Campground <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">032</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 28–Jul 1</td><td>Lake Harriet <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">04</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 28–Jul 1</td><td>Clackamas Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">30</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 28–Jul 1</td><td>Kinnikinnick — Laurance Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">16</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 28–Jul 1</td><td>Pine Meadows <span style="color:#888;font-size:11px">(Southern OR)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">47</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 28–Jul 1</td><td>Princess Creek Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">26</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 28–Jul 1</td><td>Eagle Creek Campground <span style="color:#888;font-size:11px">(Columbia Gorge)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">4</td><td></td></tr>
+    <tr><td>Jun 28–Jul 1</td><td>Frog Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 4</td><td class="who">w/kids</td><td class="site">20</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 28–Jul 1</td><td>Hebo Lake Campground <span style="color:#888;font-size:11px">(Oregon Coast)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">12</td><td></td></tr>
+    <tr><td>Jun 28–Jul 1</td><td>Indian Creek <span style="color:#888;font-size:11px">(Central WA)</span></td><td class="days partial">3 of 4</td><td class="who">w/kids</td><td class="site">29</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 28–Jul 1</td><td>Little Cultus Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">7</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 28–Jul 1</td><td>Gull Point Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">36</td><td></td></tr>
+    <tr class="avail-all"><td>Jun 28–Jul 1</td><td>Packard Creek <span style="color:#888;font-size:11px">(Southern OR)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">32</td><td></td></tr>
+  </tbody>
+</table>
+
+<!-- WINDOW 3 -->
+<h2>Window 3 — Jul 3–7, 2026 (5 days)</h2>
+<table>
+  <thead><tr><th>Dates</th><th>Location</th><th>Length (Days)</th><th>Who</th><th>Site #</th><th>Conflicts</th></tr></thead>
+  <tbody>
+    <tr><td>Jul 3–7</td><td>Sunset Falls Campground <span style="color:#888;font-size:11px">(Gifford Pinchot)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">7</td><td></td></tr>
+    <tr><td>Jul 3–7</td><td>Clear Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">3</td><td></td></tr>
+    <tr><td>Jul 3–7</td><td>Clackamas Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">30</td><td></td></tr>
+    <tr><td>Jul 3–7</td><td>Kinnikinnick — Laurance Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">7</td><td></td></tr>
+    <tr><td>Jul 3–7</td><td>Lake Harriet <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">08</td><td></td></tr>
+    <tr><td>Jul 3–7</td><td>Pine Meadows <span style="color:#888;font-size:11px">(Southern OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">21</td><td></td></tr>
+    <tr><td>Jul 3–7</td><td>Princess Creek Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days partial">4 of 5</td><td class="who">w/kids</td><td class="site">23</td><td></td></tr>
+    <tr><td>Jul 3–7</td><td>Eagle Creek Campground <span style="color:#888;font-size:11px">(Columbia Gorge)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">4</td><td></td></tr>
+    <tr><td>Jul 3–7</td><td>Hebo Lake Campground <span style="color:#888;font-size:11px">(Oregon Coast)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">2</td><td></td></tr>
+    <tr><td>Jul 3–7</td><td>Indian Creek <span style="color:#888;font-size:11px">(Central WA)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">30</td><td></td></tr>
+    <tr><td>Jul 3–7</td><td>Little Cultus Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">24</td><td></td></tr>
+    <tr><td>Jul 3–7</td><td>Gull Point Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">36</td><td></td></tr>
+    <tr><td>Jul 3–7</td><td>Packard Creek <span style="color:#888;font-size:11px">(Southern OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">32</td><td></td></tr>
+  </tbody>
+</table>
+
+<!-- WINDOW 4 -->
+<h2>Window 4 — Jul 12–15, 2026 (4 days)</h2>
+<table>
+  <thead><tr><th>Dates</th><th>Location</th><th>Length (Days)</th><th>Who</th><th>Site #</th><th>Conflicts</th></tr></thead>
+  <tbody>
+    <tr class="avail-all"><td>Jul 12–15</td><td>Clear Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">15</td><td></td></tr>
+    <tr class="avail-all"><td>Jul 12–15</td><td>Clackamas Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">30</td><td></td></tr>
+    <tr><td>Jul 12–15</td><td>Kinnikinnick — Laurance Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 4</td><td class="who">w/kids</td><td class="site">18</td><td></td></tr>
+    <tr class="avail-all"><td>Jul 12–15</td><td>Pine Meadows <span style="color:#888;font-size:11px">(Southern OR)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">28</td><td></td></tr>
+    <tr class="avail-all"><td>Jul 12–15</td><td>Princess Creek Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">29</td><td></td></tr>
+    <tr class="avail-all"><td>Jul 12–15</td><td>Eagle Creek Campground <span style="color:#888;font-size:11px">(Columbia Gorge)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">4</td><td></td></tr>
+    <tr class="avail-all"><td>Jul 12–15</td><td>Hebo Lake Campground <span style="color:#888;font-size:11px">(Oregon Coast)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">12</td><td></td></tr>
+    <tr><td>Jul 12–15</td><td>Indian Creek <span style="color:#888;font-size:11px">(Central WA)</span></td><td class="days partial">3 of 4</td><td class="who">w/kids</td><td class="site">25</td><td></td></tr>
+    <tr><td>Jul 12–15</td><td>Little Cultus Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days partial">3 of 4</td><td class="who">w/kids</td><td class="site">19</td><td></td></tr>
+    <tr><td>Jul 12–15</td><td>Gull Point Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days partial">3 of 4</td><td class="who">w/kids</td><td class="site">30</td><td></td></tr>
+    <tr><td>Jul 12–15</td><td>Packard Creek <span style="color:#888;font-size:11px">(Southern OR)</span></td><td class="days partial">3 of 4</td><td class="who">w/kids</td><td class="site">37</td><td></td></tr>
+  </tbody>
+</table>
+
+<!-- WINDOW 5 -->
+<h2>Window 5 — Jul 17–21, 2026 (5 days)</h2>
+<table>
+  <thead><tr><th>Dates</th><th>Location</th><th>Length (Days)</th><th>Who</th><th>Site #</th><th>Conflicts</th></tr></thead>
+  <tbody>
+    <tr><td>Jul 17–21</td><td>Sunset Falls Campground <span style="color:#888;font-size:11px">(Gifford Pinchot)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">7</td><td></td></tr>
+    <tr><td>Jul 17–21</td><td>Clear Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">10</td><td></td></tr>
+    <tr class="avail-all"><td>Jul 17–21</td><td>Clackamas Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days full">5 of 5 ✓</td><td class="who">w/kids</td><td class="site">30</td><td></td></tr>
+    <tr class="avail-all"><td>Jul 17–21</td><td>Kinnikinnick — Laurance Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days full">5 of 5 ✓</td><td class="who">w/kids</td><td class="site">18</td><td></td></tr>
+    <tr><td>Jul 17–21</td><td>Pine Meadows <span style="color:#888;font-size:11px">(Southern OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">28</td><td></td></tr>
+    <tr><td>Jul 17–21</td><td>Paradise In Oregon <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">52</td><td></td></tr>
+    <tr><td>Jul 17–21</td><td>Eagle Creek Campground <span style="color:#888;font-size:11px">(Columbia Gorge)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">4</td><td></td></tr>
+    <tr><td>Jul 17–21</td><td>Frog Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">24</td><td></td></tr>
+    <tr><td>Jul 17–21</td><td>Hebo Lake Campground <span style="color:#888;font-size:11px">(Oregon Coast)</span></td><td class="days partial">4 of 5</td><td class="who">w/kids</td><td class="site">12</td><td></td></tr>
+    <tr><td>Jul 17–21</td><td>Indian Creek <span style="color:#888;font-size:11px">(Central WA)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">29</td><td></td></tr>
+    <tr><td>Jul 17–21</td><td>Little Cultus Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">10</td><td></td></tr>
+    <tr><td>Jul 17–21</td><td>Gull Point Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">36</td><td></td></tr>
+    <tr><td>Jul 17–21</td><td>Packard Creek <span style="color:#888;font-size:11px">(Southern OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">34</td><td></td></tr>
+    <tr><td>Jul 17–21</td><td>Ivan Oakes Campground <span style="color:#888;font-size:11px">(Eugene)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">21</td><td></td></tr>
+  </tbody>
+</table>
+
+<!-- WINDOW 6 -->
+<h2>Window 6 — Jul 26–29, 2026 (4 days)</h2>
+<table>
+  <thead><tr><th>Dates</th><th>Location</th><th>Length (Days)</th><th>Who</th><th>Site #</th><th>Conflicts</th></tr></thead>
+  <tbody>
+    <tr class="avail-all"><td>Jul 26–29</td><td>Clear Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">10</td><td></td></tr>
+    <tr><td>Jul 26–29</td><td>Lake Harriet <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 4</td><td class="who">w/kids</td><td class="site">04</td><td></td></tr>
+    <tr><td>Jul 26–29</td><td>Clackamas Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 4</td><td class="who">w/kids</td><td class="site">30</td><td></td></tr>
+    <tr><td>Jul 26–29</td><td>Kinnikinnick — Laurance Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 4</td><td class="who">w/kids</td><td class="site">7</td><td></td></tr>
+    <tr><td>Jul 26–29</td><td>Pine Meadows <span style="color:#888;font-size:11px">(Southern OR)</span></td><td class="days partial">3 of 4</td><td class="who">w/kids</td><td class="site">28</td><td></td></tr>
+    <tr class="avail-all"><td>Jul 26–29</td><td>Paradise In Oregon <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">59</td><td></td></tr>
+    <tr class="avail-all"><td>Jul 26–29</td><td>Eagle Creek Campground <span style="color:#888;font-size:11px">(Columbia Gorge)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">4</td><td></td></tr>
+    <tr class="avail-all"><td>Jul 26–29</td><td>Hebo Lake Campground <span style="color:#888;font-size:11px">(Oregon Coast)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">12</td><td></td></tr>
+    <tr class="avail-all"><td>Jul 26–29</td><td>Indian Creek <span style="color:#888;font-size:11px">(Central WA)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">29</td><td></td></tr>
+    <tr class="avail-all"><td>Jul 26–29</td><td>Gull Point Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">36</td><td></td></tr>
+    <tr class="avail-all"><td>Jul 26–29</td><td>Packard Creek <span style="color:#888;font-size:11px">(Southern OR)</span></td><td class="days full">4 of 4 ✓</td><td class="who">w/kids</td><td class="site">34</td><td></td></tr>
+  </tbody>
+</table>
+
+<!-- WINDOW 7 -->
+<h2>Window 7 — Aug 14–18, 2026 (5 days)</h2>
+<table>
+  <thead><tr><th>Dates</th><th>Location</th><th>Length (Days)</th><th>Who</th><th>Site #</th><th>Conflicts</th></tr></thead>
+  <tbody>
+    <tr><td>Aug 14–18</td><td>Clear Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">10</td><td></td></tr>
+    <tr><td>Aug 14–18</td><td>Cove Creek Campground <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">033</td><td></td></tr>
+    <tr><td>Aug 14–18</td><td>Lake Harriet <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">08</td><td></td></tr>
+    <tr><td>Aug 14–18</td><td>Clackamas Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">30</td><td></td></tr>
+    <tr><td>Aug 14–18</td><td>Kinnikinnick — Laurance Lake <span style="color:#888;font-size:11px">(Mt. Hood)</span></td><td class="days partial">4 of 5</td><td class="who">w/kids</td><td class="site">7</td><td></td></tr>
+    <tr><td>Aug 14–18</td><td>Pine Meadows <span style="color:#888;font-size:11px">(Southern OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">21</td><td></td></tr>
+    <tr><td>Aug 14–18</td><td>Princess Creek Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">32</td><td></td></tr>
+    <tr><td>Aug 14–18</td><td>Eagle Creek Campground <span style="color:#888;font-size:11px">(Columbia Gorge)</span></td><td class="days partial">4 of 5</td><td class="who">w/kids</td><td class="site">4</td><td></td></tr>
+    <tr class="avail-all"><td>Aug 14–18</td><td>Hebo Lake Campground <span style="color:#888;font-size:11px">(Oregon Coast)</span></td><td class="days full">5 of 5 ✓</td><td class="who">w/kids</td><td class="site">12</td><td></td></tr>
+    <tr><td>Aug 14–18</td><td>Indian Creek <span style="color:#888;font-size:11px">(Central WA)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">29</td><td></td></tr>
+    <tr><td>Aug 14–18</td><td>Little Cultus Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">17</td><td></td></tr>
+    <tr><td>Aug 14–18</td><td>Gull Point Campground <span style="color:#888;font-size:11px">(Central OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">36</td><td></td></tr>
+    <tr><td>Aug 14–18</td><td>Packard Creek <span style="color:#888;font-size:11px">(Southern OR)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">32</td><td></td></tr>
+    <tr><td>Aug 14–18</td><td>Ivan Oakes Campground <span style="color:#888;font-size:11px">(Eugene)</span></td><td class="days partial">3 of 5</td><td class="who">w/kids</td><td class="site">19</td><td></td></tr>
+  </tbody>
+</table>
+
+<p class="note">Data queried from recreation.gov availability API, April 16, 2026. Availability shown reflects the preferred/top-priority site per campground per window based on your CampSites List ordering. "Length (Days)" indicates how many days within the window that specific site shows as Available. Sites marked ✓ are open the full window. Reserve directly at recreation.gov.</p>
+
+</body>
+</html>

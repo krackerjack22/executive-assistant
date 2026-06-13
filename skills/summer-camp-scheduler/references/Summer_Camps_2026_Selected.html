@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Summer Camps 2026 — Selected Schedule</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f6f9;
+      color: #222;
+      margin: 0;
+      padding: 28px;
+    }
+    h1 { font-size: 1.55rem; margin-bottom: 4px; color: #1a1a2e; }
+    .subtitle { color: #666; font-size: 0.88rem; margin-bottom: 30px; }
+
+    /* ── MAIN TABLE ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 36px;
+    }
+    thead tr { background: #1a1a2e; color: white; }
+    th {
+      padding: 12px 14px;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      text-align: left;
+    }
+    td {
+      padding: 11px 14px;
+      font-size: 0.875rem;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbff; }
+
+    .camp-name { font-weight: 600; color: #1a1a2e; }
+    .date-col  { white-space: nowrap; font-weight: 500; }
+    .time-col  { white-space: nowrap; color: #444; }
+    .cost-col  { white-space: nowrap; }
+    .loc-col   { color: #444; }
+
+    .conflict-warn {
+      color: #b85c00;
+      font-size: 0.82rem;
+    }
+    .conflict-none {
+      color: #22a06b;
+      font-size: 0.82rem;
+    }
+    .conflict-note {
+      color: #888;
+      font-style: italic;
+      font-size: 0.79rem;
+    }
+    .secondary-badge {
+      display: inline-block;
+      background: #eef1f7;
+      color: #555;
+      border-radius: 10px;
+      padding: 1px 8px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .primary-badge {
+      display: inline-block;
+      background: #d4f0e2;
+      color: #1a7a4a;
+      border-radius: 10px;
+      padding: 1px 8px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    /* stripe every other group */
+    .row-group-a td { background: #ffffff; }
+    .row-group-b td { background: #fafbff; }
+
+    /* ── TIMELINE ── */
+    .timeline-section h2 {
+      font-size: 1.1rem;
+      margin-bottom: 14px;
+      color: #1a1a2e;
+    }
+    .months {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .month-block {
+      background: white;
+      border-radius: 10px;
+      padding: 14px 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.09);
+      min-width: 200px;
+      flex: 1;
+    }
+    .month-label {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #1a1a2e;
+      margin-bottom: 10px;
+      border-bottom: 2px solid #eef1f7;
+      padding-bottom: 6px;
+    }
+    .month-event {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.83rem;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+    .dot-blue   { background: #3b82f6; }
+    .dot-orange { background: #f97316; }
+    .dot-purple { background: #a855f7; }
+    .dot-green  { background: #22c55e; }
+    .dot-red    { background: #ef4444; }
+    .dot-teal   { background: #14b8a6; }
+    .dot-gray   { background: #94a3b8; }
+    .event-name { font-weight: 600; line-height: 1.3; }
+    .event-meta { color: #666; font-size: 0.78rem; }
+
+    /* ── CONFLICT CALLOUT ── */
+    .callout {
+      background: #fff8ed;
+      border-left: 4px solid #f97316;
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+      color: #7c4a00;
+    }
+    .callout strong { display: block; margin-bottom: 4px; font-size: 0.88rem; }
+
+    .legend {
+      font-size: 0.8rem;
+      color: #555;
+      margin-top: 20px;
+      background: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+  </style>
+</head>
+<body>
+
+<h1>🏕️ Summer Camps 2026 — Selected Schedule</h1>
+<p class="subtitle">Optimized selection · Conflicts checked against Google Calendar (tylercombs@gmail.com) · PST</p>
+
+<!-- ══════════════════════════════════════ CONFLICT CALLOUT -->
+<div class="callout">
+  <strong>⚠ Heads-up on known conflicts</strong>
+  <b>Babysitter Training – May 9:</b> Soccer Practice (11–11:30 am) + Soccer Game (11:30 am–12:55 pm) overlap with the 9 am–3 pm training. Jul 11 is listed as secondary fallback (no conflicts that day — Veronica's birthday party is 5–9 pm, no overlap).<br><br>
+  <b>Biking Series 1 – Jun 15–18:</b> "Joe &amp; Fam in town" all-day event covers through Mon Jun 15. Tue–Thu are clear.
+</div>
+
+<!-- ══════════════════════════════════════ MAIN TABLE -->
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Camp / Class</th>
+      <th>Date(s)</th>
+      <th>Days</th>
+      <th>Time</th>
+      <th>Cost (Res / Non-Res)</th>
+      <th>Location</th>
+      <th>Conflicts</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <!-- 1. Babysitter Training – PRIMARY -->
+    <tr class="row-group-a">
+      <td>1a</td>
+      <td class="camp-name">Babysitter Training <span class="primary-badge">PRIMARY</span></td>
+      <td class="date-col">Sat, May 9, 2026</td>
+      <td>Sa</td>
+      <td class="time-col">9 am – 3 pm</td>
+      <td class="cost-col">$187 / $215</td>
+      <td class="loc-col">ACC</td>
+      <td class="conflict-warn">⚠ Soccer Practice 11–11:30 am + Soccer Game 11:30 am–12:55 pm</td>
+    </tr>
+    <!-- 1. Babysitter Training – SECONDARY -->
+    <tr class="row-group-a">
+      <td>1b</td>
+      <td class="camp-name">Babysitter Training <span class="secondary-badge">SECONDARY</span></td>
+      <td class="date-col">Sat, Jul 11, 2026</td>
+      <td>Sa</td>
+      <td class="time-col">9 am – 3 pm</td>
+      <td class="cost-col">$187 / $215</td>
+      <td class="loc-col">ACC</td>
+      <td class="conflict-none">None <span class="conflict-note">(Veronica's birthday 5–9 pm — no overlap)</span></td>
+    </tr>
+
+    <!-- 2. Biking Series 1 -->
+    <tr class="row-group-b">
+      <td>2</td>
+      <td class="camp-name">Youth Mountain Biking – Series 1</td>
+      <td class="date-col">Jun 15–18, 2026</td>
+      <td>M–Th</td>
+      <td class="time-col">9–11:30 am</td>
+      <td class="cost-col">$173 / $199</td>
+      <td class="loc-col">Browning / LUSCH</td>
+      <td class="conflict-warn">⚠ "Joe &amp; Fam in town" all-day event on Mon Jun 15 only</td>
+    </tr>
+
+    <!-- 3. Movie Makers -->
+    <tr class="row-group-a">
+      <td>3</td>
+      <td class="camp-name">Movie Makers Camp (YouthTech)</td>
+      <td class="date-col">Jun 22–25, 2026</td>
+      <td>M–Th</td>
+      <td class="time-col">9 am – 12 pm</td>
+      <td class="cost-col">$160 / $189</td>
+      <td class="loc-col">OCE</td>
+      <td class="conflict-none">None</td>
+    </tr>
+
+    <!-- 4. Fiber Arts -->
+    <tr class="row-group-b">
+      <td>4</td>
+      <td class="camp-name">Intro to Fiber Arts Camp</td>
+      <td class="date-col">Jun 29 – Jul 2, 2026</td>
+      <td>M–Th</td>
+      <td class="time-col">9 am – 12 pm</td>
+      <td class="cost-col">$255 / $293</td>
+      <td class="loc-col">OCE (Rachael Grow)</td>
+      <td class="conflict-none">None <span class="conflict-note">(Ceramics same week, 2–4:30 pm — no time overlap)</span></td>
+    </tr>
+
+    <!-- 5. Ceramics -->
+    <tr class="row-group-b">
+      <td>5</td>
+      <td class="camp-name">Ceramics for Kids Camp</td>
+      <td class="date-col">Jun 29 – Jul 3, 2026</td>
+      <td>M–F</td>
+      <td class="time-col">2–4:30 pm</td>
+      <td class="cost-col">$293 / $336</td>
+      <td class="loc-col">Greentree Rd Art Studio</td>
+      <td class="conflict-none">None <span class="conflict-note">(Fiber Arts same week, 9 am–12 pm — no time overlap)</span></td>
+    </tr>
+
+    <!-- 6. Dynamic Duos -->
+    <tr class="row-group-a">
+      <td>6</td>
+      <td class="camp-name">Dynamic Duos – Panzanella &amp; Strawberry Shortcake</td>
+      <td class="date-col">Sun, Aug 23, 2026</td>
+      <td>Su</td>
+      <td class="time-col">10 am – 1 pm</td>
+      <td class="cost-col">$50 / $75</td>
+      <td class="loc-col">LUSCH (Hashimawari)</td>
+      <td class="conflict-none">None</td>
+    </tr>
+
+  </tbody>
+</table>
+
+<!-- ══════════════════════════════════════ TIMELINE -->
+<div class="timeline-section">
+  <h2>📅 Visual Timeline</h2>
+  <div class="months">
+
+    <div class="month-block">
+      <div class="month-label">May 2026</div>
+      <div class="month-event">
+        <div class="dot dot-blue"></div>
+        <div>
+          <div class="event-name">Babysitter Training <em style="font-weight:400;font-size:0.78rem">(primary)</em></div>
+          <div class="event-meta">Sat May 9 · 9 am–3 pm · ⚠ soccer conflict</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="month-block">
+      <div class="month-label">June 2026</div>
+      <div class="month-event">
+        <div class="dot dot-green"></div>
+        <div>
+          <div class="event-name">Youth Mountain Biking S1</div>
+          <div class="event-meta">Jun 15–18 · 9–11:30 am · ⚠ Jun 15 family visit</div>
+        </div>
+      </div>
+      <div class="month-event">
+        <div class="dot dot-orange"></div>
+        <div>
+          <div class="event-name">Movie Makers Camp</div>
+          <div class="event-meta">Jun 22–25 · 9 am–12 pm · Clear</div>
+        </div>
+      </div>
+      <div class="month-event">
+        <div class="dot dot-purple"></div>
+        <div>
+          <div class="event-name">Fiber Arts Camp</div>
+          <div class="event-meta">Jun 29–Jul 2 · 9 am–12 pm · Clear</div>
+        </div>
+      </div>
+      <div class="month-event">
+        <div class="dot dot-teal"></div>
+        <div>
+          <div class="event-name">Ceramics for Kids</div>
+          <div class="event-meta">Jun 29–Jul 3 · 2–4:30 pm · Clear</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="month-block">
+      <div class="month-label">July 2026</div>
+      <div class="month-event">
+        <div class="dot dot-teal"></div>
+        <div>
+          <div class="event-name">Ceramics for Kids <em style="font-weight:400;font-size:0.78rem">(ends Jul 3)</em></div>
+          <div class="event-meta">Jul 1–3 · 2–4:30 pm · Clear</div>
+        </div>
+      </div>
+      <div class="month-event">
+        <div class="dot dot-gray"></div>
+        <div>
+          <div class="event-name">Babysitter Training <em style="font-weight:400;font-size:0.78rem">(secondary)</em></div>
+          <div class="event-meta">Sat Jul 11 · 9 am–3 pm · Clear</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="month-block">
+      <div class="month-label">August 2026</div>
+      <div class="month-event">
+        <div class="dot dot-red"></div>
+        <div>
+          <div class="event-name">Dynamic Duos Cooking</div>
+          <div class="event-meta">Sun Aug 23 · 10 am–1 pm · Clear</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><span style="width:12px;height:12px;border-radius:50%;background:#3b82f6;display:inline-block"></span> Babysitter Training</div>
+  <div class="legend-item"><span style="width:12px;height:12px;border-radius:50%;background:#22c55e;display:inline-block"></span> Biking Series 1</div>
+  <div class="legend-item"><span style="width:12px;height:12px;border-radius:50%;background:#f97316;display:inline-block"></span> Movie Makers</div>
+  <div class="legend-item"><span style="width:12px;height:12px;border-radius:50%;background:#a855f7;display:inline-block"></span> Fiber Arts</div>
+  <div class="legend-item"><span style="width:12px;height:12px;border-radius:50%;background:#14b8a6;display:inline-block"></span> Ceramics</div>
+  <div class="legend-item"><span style="width:12px;height:12px;border-radius:50%;background:#ef4444;display:inline-block"></span> Dynamic Duos</div>
+  <div class="legend-item"><span style="width:12px;height:12px;border-radius:50%;background:#94a3b8;display:inline-block"></span> Babysitter Training (secondary)</div>
+</div>
+
+</body>
+</html>

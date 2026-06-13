@@ -1,0 +1,47 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Send Calendar Data to Make.com Webhook",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://hook.us2.make.com/i9or702kfl6y7cwyip194fb2ny0i1f6r"
+    }
+  ],
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "sendCalendarData",
+        "summary": "Send structured calendar event data to Make.com",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    },
+                    "description": "Array of structured calendar events"
+                  }
+                },
+                "required": [
+                  "data"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    }
+  }
+}
