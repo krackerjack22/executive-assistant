@@ -1,0 +1,9 @@
+{
+  "default_profile_id": "tyler_combs",
+  "fill_options": {
+    "flatten_after_fill": false,
+    "preserve_original": true,
+    "output_suffix": "_filled"
+  },
+  "bitwarden": { "enabled": false }
+}

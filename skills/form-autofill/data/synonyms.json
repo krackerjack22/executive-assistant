@@ -1,0 +1,101 @@
+{
+  "_doc": "Deterministic synonym map: PDF field name / alt text token → resolved profile path. No PII. Tokens are lowercased for matching. All values are dot-notation paths into the resolved profile dict.",
+  "_version": "1.0",
+
+  "identity": {
+    "patient name":         "identity.legal_name",
+    "patient_name":         "identity.legal_name",
+    "patient last name":    "identity.legal_name",
+    "full name":            "identity.legal_name",
+    "legal name":           "identity.legal_name",
+    "name":                 "identity.legal_name",
+    "last name":            "identity.legal_name",
+    "first name":           "identity.legal_name",
+    "date of birth":        "identity.date_of_birth",
+    "dob":                  "identity.date_of_birth",
+    "birth date":           "identity.date_of_birth",
+    "birthdate":            "identity.date_of_birth",
+    "gender":               "identity.gender",
+    "sex":                  "identity.gender",
+    "marital status":       "identity.marital_status",
+    "ssn":                  "vault_references.ssn",
+    "social security":      "vault_references.ssn",
+    "drivers license":      "identity.drivers_license_number",
+    "driver license":       "identity.drivers_license_number",
+    "dl number":            "identity.drivers_license_number",
+    "dl state":             "identity.drivers_license_state"
+  },
+
+  "contact": {
+    "phone":                "contact.primary_phone",
+    "phone number":         "contact.primary_phone",
+    "cell":                 "contact.primary_phone",
+    "cell phone":           "contact.primary_phone",
+    "mobile":               "contact.primary_phone",
+    "home phone":           "contact.primary_phone",
+    "work phone":           "contact.work_phone",
+    "alternate phone":      "contact.alternate_phone",
+    "email":                "contact.email",
+    "email address":        "contact.email"
+  },
+
+  "address": {
+    "street":               "addresses.home.street_1",
+    "street address":       "addresses.home.street_1",
+    "address":              "addresses.home.street_1",
+    "address line 1":       "addresses.home.street_1",
+    "address line 2":       "addresses.home.street_2",
+    "city":                 "addresses.home.city",
+    "state":                "addresses.home.state_code",
+    "zip":                  "addresses.home.postal_code",
+    "zip code":             "addresses.home.postal_code",
+    "postal code":          "addresses.home.postal_code"
+  },
+
+  "employment": {
+    "employer":             "employment.employer",
+    "employer name":        "employment.employer",
+    "company":              "employment.employer",
+    "occupation":           "employment.title",
+    "job title":            "employment.title",
+    "title":                "employment.title",
+    "work address":         "employment.address.street_1",
+    "employer address":     "employment.address.street_1",
+    "employer phone":       "employment.phone",
+    "work phone":           "employment.phone"
+  },
+
+  "insurance": {
+    "insurance company":    "insurance.primary.carrier",
+    "carrier":              "insurance.primary.carrier",
+    "insurance carrier":    "insurance.primary.carrier",
+    "insurance name":       "insurance.primary.carrier",
+    "member id":            "insurance.primary.member_id",
+    "member #":             "insurance.primary.member_id",
+    "policy number":        "insurance.primary.member_id",
+    "group number":         "insurance.primary.group_number",
+    "group #":              "insurance.primary.group_number",
+    "group id":             "insurance.primary.group_number",
+    "rx bin":               "insurance.primary.rx_bin",
+    "rx pcn":               "insurance.primary.rx_pcn",
+    "insurance phone":      "insurance.primary.providers_phone",
+    "carrier phone":        "insurance.primary.providers_phone",
+    "subscriber name":      "insurance.primary.subscriber_profile_id",
+    "subscriber":           "insurance.primary.subscriber_profile_id",
+    "subscriber relationship": "insurance.primary.subscriber_relationship_to_patient",
+    "relationship to subscriber": "insurance.primary.subscriber_relationship_to_patient",
+    "insured relationship": "insurance.primary.subscriber_relationship_to_patient",
+    "deductible":           "insurance.primary.deductible",
+    "copay":                "insurance.primary.copay"
+  },
+
+  "physician": {
+    "primary care physician": "external_entities.primary_care_physician.name",
+    "pcp":                    "external_entities.primary_care_physician.name",
+    "physician name":         "external_entities.primary_care_physician.name",
+    "doctor name":            "external_entities.primary_care_physician.name",
+    "physician phone":        "external_entities.primary_care_physician.phone",
+    "doctor phone":           "external_entities.primary_care_physician.phone",
+    "pcp phone":              "external_entities.primary_care_physician.phone"
+  }
+}
