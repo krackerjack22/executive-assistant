@@ -62,6 +62,8 @@
     "mobile phone":           "contact.primary_phone",
     "home phone":             "contact.primary_phone",
     "primary phone":          "contact.primary_phone",
+    "phone type":             "contact.primary_phone_type",
+    "cell home work":         "contact.primary_phone_type",
     "work phone":             "contact.work_phone",
     "alternate phone":        "contact.alternate_phone",
     "other phone":            "contact.alternate_phone",
@@ -159,6 +161,14 @@
 
     "pcp address":            "external_entities.primary_care_physician.address.street_1",
     "physician address":      "external_entities.primary_care_physician.address.street_1"
+  },
+
+  "legal": {
+    "trust name":        "legal.trust_name",
+    "grantor name":      "legal.trust_name",
+    "entity name":       "legal.trust_name",
+    "beneficiary name":  "legal.trust_name",
+    "trust":             "legal.trust_name"
   },
 
   "school": {

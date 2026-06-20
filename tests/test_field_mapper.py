@@ -100,7 +100,7 @@ def test_dob_high():
 def test_phone_high():
     r = fm.map_pdf_field("phone", "Phone Number", _tyler(), _index())
     assert r["confidence"] == "high"
-    assert "5035454177" in r["value"]
+    assert "503-545-4177" in r["value"]
 
 
 def test_city_high():
@@ -236,6 +236,72 @@ def test_zero_none_for_synthetic_fields():
         if r["confidence"] == "none":
             none_fields.append((name, r["confidence"]))
     assert none_fields == [], f"Unexpected none-confidence fields: {none_fields}"
+
+
+# ---------------------------------------------------------------------------
+# Context rule enforcement (Issue #2)
+# ---------------------------------------------------------------------------
+
+def test_trust_name_excluded_for_patient_name():
+    """legal.trust_name must never appear as the result for a patient name field."""
+    tyler = _tyler()
+    trust_val = tyler.get("legal", {}).get("trust_name")
+    r = fm.map_pdf_field("patient name", "Patient Name", tyler, _index())
+    assert r["value"] != trust_val, (
+        "Trust name must not be returned for 'patient name' field"
+    )
+
+
+def test_trust_name_allowed_for_trust_field():
+    """'trust name' field must surface the trust name value."""
+    tyler = _tyler()
+    trust_val = tyler.get("legal", {}).get("trust_name")
+    if trust_val is None:
+        pytest.skip("legal.trust_name not present in tyler profile")
+    r = fm.map_pdf_field("trust name", "Trust Name", tyler, _index())
+    # Trust name should be the winner or appear as a candidate
+    all_values = [r["value"]] + [a["candidate_value"] for a in r.get("alternatives", [])]
+    assert trust_val in all_values, (
+        f"Trust name value not found in result or alternatives for 'trust name' field"
+    )
+
+
+def test_trust_name_excluded_for_subscriber_name():
+    """legal.trust_name must be blocked for 'subscriber name' — no permit keywords."""
+    tyler = _tyler()
+    trust_val = tyler.get("legal", {}).get("trust_name")
+    r = fm.map_pdf_field("subscriber name", "Subscriber Name", tyler, _index())
+    assert r["value"] != trust_val
+
+
+# ---------------------------------------------------------------------------
+# Section-hint: PCP context routing (Issue #4)
+# ---------------------------------------------------------------------------
+
+def test_pcp_phone_with_section_hint():
+    """'phone' field with section_hint='pcp' must return the PCP phone, not patient phone."""
+    tyler = _tyler()
+    pcp_phone = tyler.get("external_entities", {}).get("primary_care_physician", {}).get("phone")
+    if pcp_phone is None:
+        pytest.skip("PCP phone not present in tyler profile")
+    r = fm.map_pdf_field("phone", "Phone Number", tyler, _index(), section_hint="pcp")
+    assert r["value"] == pcp_phone, (
+        f"Expected PCP phone {pcp_phone!r}, got {r['value']!r}"
+    )
+
+
+def test_phone_without_section_hint_returns_patient_phone():
+    """'phone' without section_hint must NOT return the PCP phone."""
+    tyler = _tyler()
+    pcp_phone_raw = tyler.get("external_entities", {}).get("primary_care_physician", {}).get("phone")
+    r = fm.map_pdf_field("phone", "Phone Number", tyler, _index())
+    assert r["value"] is not None
+    # The source must point to the patient contact, not the PCP
+    assert "contact.primary_phone" in r["source"], (
+        f"Expected contact.primary_phone in source, got {r['source']!r}"
+    )
+    if pcp_phone_raw:
+        assert r["value"] != pcp_phone_raw
 
 
 def test_source_explanation_present_all_fields():

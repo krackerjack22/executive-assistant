@@ -11,6 +11,8 @@ from lib import profile_loader as pl
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures"
 SYNTHETIC_PDF = FIXTURE_DIR / "synthetic_form.pdf"
 AMBIGUOUS_PDF = FIXTURE_DIR / "ambiguous_form.pdf"
+TWO_PAGE_PDF = FIXTURE_DIR / "two_page_form.pdf"
+BTN_PDF = FIXTURE_DIR / "btn_form.pdf"
 
 
 @pytest.fixture(scope="module")
@@ -268,6 +270,47 @@ def test_commit_writes_file(tyler_profile, index, tmp_path):
     assert output.stat().st_size > 0
 
 
+# ---------------------------------------------------------------------------
+# /Btn field support (Issue #3)
+# ---------------------------------------------------------------------------
+
+def test_btn_pdf_exists():
+    assert BTN_PDF.exists(), (
+        "Btn test PDF not found. Run: /usr/bin/python3 tests/make_test_pdf.py"
+    )
+
+
+def test_btn_gender_field_mapped(tyler_profile, index):
+    """/Btn gender field in btn_form.pdf maps to the correct gender value."""
+    result = acroform.fill(
+        template_pdf=BTN_PDF,
+        profile=tyler_profile,
+        index=index,
+        output_pdf=BTN_PDF.parent / "dummy_btn.pdf",
+        dry_run=True,
+    )
+    field_map = {f["name"]: f for f in result["fields"]}
+    gender = field_map.get("gender")
+    assert gender is not None, "gender field not found in btn_form"
+    assert gender["mapped_value"] is not None, "gender field value should not be None"
+    assert gender["confidence"] != "none"
+
+
+def test_btn_form_commit_writes_file(tyler_profile, index, tmp_path):
+    """/Btn form fills and commits without error."""
+    output = tmp_path / "btn_filled.pdf"
+    result = acroform.fill(
+        template_pdf=BTN_PDF,
+        profile=tyler_profile,
+        index=index,
+        output_pdf=output,
+        dry_run=False,
+    )
+    assert result["mode"] == "filled"
+    assert output.exists()
+    assert result["filled_count"] > 0
+
+
 def test_fiona_uses_tyler_address(index, tmp_path):
     """Fiona's form fill should use Tyler's address (inherited)."""
     fiona = pl.load_profile("fiona_combs")
@@ -280,6 +323,52 @@ def test_fiona_uses_tyler_address(index, tmp_path):
     )
     field_map = {f["name"]: f["mapped_value"] for f in result["fields"]}
     assert field_map.get("city") == "Lake Oswego"
+
+
+# ---------------------------------------------------------------------------
+# Multi-page fill regression (Issue #1)
+# ---------------------------------------------------------------------------
+
+def test_two_page_pdf_exists():
+    assert TWO_PAGE_PDF.exists(), (
+        "Two-page test PDF not found. Run: /usr/bin/python3 tests/make_test_pdf.py"
+    )
+
+
+def test_commit_filled_count_positive(tyler_profile, index, tmp_path):
+    """Regression guard: commit must fill at least one field (all-pages write)."""
+    output = tmp_path / "tyler_filled.pdf"
+    result = acroform.fill(
+        template_pdf=SYNTHETIC_PDF,
+        profile=tyler_profile,
+        index=index,
+        output_pdf=output,
+        dry_run=False,
+    )
+    assert result["mode"] == "filled"
+    assert result["filled_count"] > 0
+
+
+def test_two_page_form_fills_both_pages(tyler_profile, index, tmp_path):
+    """Fields on page 2 must be filled (not silently skipped)."""
+    output = tmp_path / "two_page_filled.pdf"
+    result = acroform.fill(
+        template_pdf=TWO_PAGE_PDF,
+        profile=tyler_profile,
+        index=index,
+        output_pdf=output,
+        dry_run=False,
+    )
+    assert result["mode"] == "filled"
+    # All 6 fields in the 2-page fixture have unambiguous synonyms
+    field_map = {f["name"]: f["mapped_value"] for f in result["fields"]}
+    # Page 1 fields
+    assert field_map.get("patient name") == "Tyler Combs"
+    assert field_map.get("phone") is not None
+    # Page 2 fields
+    assert field_map.get("city") == "Lake Oswego"
+    assert field_map.get("state") == "OR"
+    assert field_map.get("zip code") == "97035"
 
 
 def test_fiona_insurance_shows_tyler_carrier(index, tmp_path):
