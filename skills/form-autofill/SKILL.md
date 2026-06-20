@@ -58,14 +58,54 @@ Never guess or fabricate a path. A wrong path produces a silent exit-2 failure.
    - Ask for confirmation before committing.
 4. **Commit** — `python skills/form-autofill/autofill.py --template <path> --profile <id> --commit [--output <path>]`.
 
+## Dry-Run Output Format
+
+Each field in the preview is labeled with a confidence tier:
+
+| Label     | Confidence | Meaning                                              | Action before commit        |
+|-----------|------------|------------------------------------------------------|-----------------------------|
+| CONFIDENT | high       | Exact synonym match, no alternatives                 | Safe to commit as-is        |
+| CHECK     | medium     | Substring match OR exact match with 1 alternative    | Glance at the "via:" line   |
+| ASK       | low        | Ambiguous — 2+ plausible candidates or weak match    | Resolve with user input      |
+| MISSING   | none       | No profile data matched this field                   | Fill manually               |
+
+Example dry-run output:
+```
+=== Autofill DRY_RUN  filled=13  skipped=1  low=0 ===
+
+  CONFIDENT  [patient name]  = 'Tyler Combs'
+             via: patient name → identity.legal_name
+  CHECK      [insurance company]  = 'Regence BlueCross BlueShield'
+             via: insurance company → insurance.primary.carrier_name
+             ALT: 'Clearcut Capital' (employment.employer) score=0.50
+  ASK        [phone email]  = '5035454177'
+             via: phone → contact.primary_phone
+             ALT: 'tylercombs@gmail.com' (contact.email) score=0.50
+             NOTE: 2 plausible alternative(s) found; review before commit.
+  MISSING    [blood type]  = (none)
+             via: no match for field 'blood type' / alt ''
+
+[DRY-RUN] Pass --commit to write the file.
+```
+
+If `low > 0`, `--commit` will be refused. Options:
+- Pass `--commit-unsafe` to write anyway (still shows low fields in output)
+- Pass `--resolve` to interactively fix low fields (v1.5, not yet implemented)
+
 ## CLI Reference
 
 ```bash
 # Dry-run (default — always safe)
 python skills/form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs
 
-# Commit (writes file)
+# Commit (writes file; refused if any field is low confidence)
 python skills/form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --commit
+
+# Commit even with low-confidence fields
+python skills/form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --commit-unsafe
+
+# Interactive resolution (v1.5 stub — prints stub message and exits)
+python skills/form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --resolve
 
 # Check environment
 python skills/form-autofill/autofill.py --check-env [--human]

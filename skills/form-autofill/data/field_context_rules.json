@@ -1,0 +1,26 @@
+{
+  "_doc": "Context-aware usage rules for profile values that must NOT be used unconditionally. The autofill agent must read this file and apply restrictions before mapping any value listed here. If a PDF field does not match the required keywords, skip this value and fall back to the standard mapping.",
+
+  "rules": [
+    {
+      "profile_id": "tyler_combs",
+      "dot_path": "legal.trust_name",
+      "value_description": "Tyler Combs Revocable Trust",
+      "restriction": "Use ONLY for legal asset ownership fields. These are fields on deeds, title documents, trust documents, estate forms, brokerage account ownership lines, or any field whose label contains: trust, grantor, grantee, beneficiary, fiduciary, title holder, asset owner, owner of record, entity name (legal context), or LLC/trust/estate.",
+      "never_use_for": [
+        "patient name",
+        "subscriber name",
+        "client name",
+        "policyholder name",
+        "insured name",
+        "printed name",
+        "signature name",
+        "emergency contact name",
+        "employer name",
+        "any standard intake or medical form name field"
+      ],
+      "learned_from": "User instruction, session 2026-06-19",
+      "keywords_that_permit_use": ["trust", "grantor", "grantee", "beneficiary", "fiduciary", "title holder", "owner of record", "entity name", "estate"]
+    }
+  ]
+}

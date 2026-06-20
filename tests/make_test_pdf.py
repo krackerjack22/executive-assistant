@@ -1,6 +1,6 @@
-"""Generate a minimal AcroForm PDF for round-trip testing.
+"""Generate minimal AcroForm PDFs for round-trip testing.
 
-Run directly to create tests/fixtures/synthetic_form.pdf:
+Run directly to create all test fixtures:
     /usr/bin/python3 tests/make_test_pdf.py
 """
 
@@ -13,6 +13,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+# Standard form: all fields have exact synonym matches → all high confidence
 FIELD_DEFS = [
     ("patient name",            "Patient Name"),
     ("dob",                     "Date of Birth"),
@@ -30,9 +31,17 @@ FIELD_DEFS = [
     ("primary care physician",  "PCP Name"),
 ]
 
+# Ambiguous form: contains a field that produces low-confidence mapping.
+# "phone email" matches both contact.primary_phone (score 0.5) and
+# contact.email (score 0.5) → 2 plausible candidates → low confidence.
+AMBIGUOUS_FIELD_DEFS = [
+    ("patient name", "Patient Name"),
+    ("phone email",  "Phone or Email"),  # deliberately ambiguous
+]
 
-def make_acroform_pdf(output_path: Path) -> None:
-    """Create a minimal PDF with proper AcroForm fields."""
+
+def _write_pdf(output_path: Path, field_defs: list) -> None:
+    """Write a minimal AcroForm PDF with the given field definitions."""
     import pypdf
     from pypdf.generic import (
         ArrayObject,
@@ -49,7 +58,7 @@ def make_acroform_pdf(output_path: Path) -> None:
 
     annot_refs = []
     y = 700
-    for name, alt in FIELD_DEFS:
+    for name, alt in field_defs:
         field_dict = DictionaryObject({
             NameObject("/Type"): NameObject("/Annot"),
             NameObject("/Subtype"): NameObject("/Widget"),
@@ -69,11 +78,9 @@ def make_acroform_pdf(output_path: Path) -> None:
         annot_refs.append(ref)
         y -= 20
 
-    # Attach widgets to page /Annots
     page_obj = page.get_object()
     page_obj[NameObject("/Annots")] = ArrayObject(annot_refs)
 
-    # Build root-level /AcroForm pointing to all fields
     acroform = DictionaryObject({
         NameObject("/Fields"): ArrayObject(annot_refs),
         NameObject("/NeedAppearances"): BooleanObject(True),
@@ -84,9 +91,20 @@ def make_acroform_pdf(output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("wb") as f:
         writer.write(f)
-    print(f"Created AcroForm PDF ({len(FIELD_DEFS)} fields): {output_path}")
+    print(f"Created AcroForm PDF ({len(field_defs)} fields): {output_path}")
+
+
+def make_acroform_pdf(output_path: Path) -> None:
+    """Create the standard synthetic form."""
+    _write_pdf(output_path, FIELD_DEFS)
+
+
+def make_ambiguous_pdf(output_path: Path) -> None:
+    """Create a form with a deliberately ambiguous field for low-confidence testing."""
+    _write_pdf(output_path, AMBIGUOUS_FIELD_DEFS)
 
 
 if __name__ == "__main__":
-    out = Path(__file__).resolve().parent / "fixtures" / "synthetic_form.pdf"
-    make_acroform_pdf(out)
+    fixture_dir = Path(__file__).resolve().parent / "fixtures"
+    make_acroform_pdf(fixture_dir / "synthetic_form.pdf")
+    make_ambiguous_pdf(fixture_dir / "ambiguous_form.pdf")
