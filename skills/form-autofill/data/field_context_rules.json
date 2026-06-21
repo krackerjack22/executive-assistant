@@ -25,8 +25,9 @@
     {
       "dot_path": "addresses.home.street_1",
       "value_description": "Home street address line 1",
-      "restriction": "Must not be used for email fields. 'Email address' contains the word 'address' but refers to an electronic address, not a physical street address.",
+      "restriction": "Only fill for fields that are clearly about a physical street address. Block if 'email' is in the label. Require at least one address-type permit keyword.",
       "block_if_keywords_present": ["email"],
+      "keywords_that_permit_use": ["address", "street", "residential", "home", "mailing", "location"],
       "learned_from": "Dry-run on student-registration-form-en, session 2026-06-21"
     }
   ]

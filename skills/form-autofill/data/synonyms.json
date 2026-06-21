@@ -69,13 +69,19 @@
     "family phone no":        "contact.primary_phone",
     "student phone":          "contact.primary_phone",
     "student cell":           "contact.primary_phone",
+    "guardian phone":         "contact.guardian_phone",
+    "guardian phone number":  "contact.guardian_phone",
+    "primary family phone no": "contact.guardian_phone",
     "phone type":             "contact.primary_phone_type",
     "cell home work":         "contact.primary_phone_type",
     "work phone":             "contact.work_phone",
     "alternate phone":        "contact.alternate_phone",
     "other phone":            "contact.alternate_phone",
     "email":                  "contact.email",
-    "email address":          "contact.email"
+    "email address":          "contact.email",
+    "student email":          "contact.email",
+    "student email address":  "contact.email",
+    "guardian email":         "contact.guardian_email"
   },
 
   "address": {

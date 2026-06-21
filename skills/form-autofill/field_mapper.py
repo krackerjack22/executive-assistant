@@ -119,13 +119,25 @@ def _normalize(text: str) -> str:
 
 
 def _resolve_path(profile: dict, dot_path: str) -> str | None:
-    """Walk a dot-notation path through a profile dict. Returns str or None."""
+    """Walk a dot-notation path through a profile dict. Handles list indices.
+
+    Returns str or None.  Numeric path segments (e.g. 'siblings.0.first_name')
+    are treated as list indices.
+    """
     parts = dot_path.split(".")
-    cur = profile
+    cur: object = profile
     for part in parts:
-        if not isinstance(cur, dict):
+        if cur is None:
             return None
-        cur = cur.get(part)
+        if isinstance(cur, list):
+            try:
+                cur = cur[int(part)]
+            except (ValueError, IndexError):
+                return None
+        elif isinstance(cur, dict):
+            cur = cur.get(part)
+        else:
+            return None
     if cur is None or isinstance(cur, (dict, list)):
         return None
     return str(cur)
@@ -145,13 +157,19 @@ def _score_match(token: str, norm: str) -> float:
     """Score how well a synonym token matches a normalised field label.
 
     Returns 1.0 for exact, len(token)/len(norm) for substring, 0.0 if absent.
-    Single-word tokens require a letter-boundary match to prevent false positives
-    like "name" matching "Vietnamese" or "city" matching "electricity".
+
+    Guards applied:
+    - Minimum-length: tokens < 3 chars require exact match (too ambiguous as substrings).
+    - Word-boundary: single-word tokens must not be preceded or followed by a letter
+      (prevents "name" matching "Vietnamese", "city" matching "electricity", etc.).
     """
     if not norm:
         return 0.0
     if token == norm:
         return 1.0
+    # Minimum-length guard: very short tokens only win on exact match (already checked).
+    if len(token) < 3:
+        return 0.0
     # Single-word tokens: must not be preceded or followed by another letter.
     # Digits/spaces/start/end are all fine (e.g. "zip" in "13zip" → ok).
     if " " not in token:
@@ -332,6 +350,195 @@ def _resolve_emergency_contact(
 
 
 # ---------------------------------------------------------------------------
+# Sibling special resolver
+# ---------------------------------------------------------------------------
+
+def _is_sibling_field(norm_name: str, norm_alt: str) -> str | None:
+    """Return profile subfield key if this looks like a sibling data field, else None."""
+    for s in (norm_name, norm_alt):
+        if "sibling" not in s:
+            continue
+        if "last" in s:
+            return "last_name"
+        if "first" in s:
+            return "first_name"
+        if "school" in s:
+            return "school_name"
+        if "grade" in s:
+            return "grade_or_year"
+        return "first_name"
+    return None
+
+
+def _resolve_sibling(
+    pdf_field_name: str,
+    pdf_field_alt: str,
+    subfield: str,
+    profile: dict,
+    today: date | None,
+) -> dict:
+    """Return the first sibling's data for the requested subfield."""
+    siblings = profile.get("siblings", [])
+    for i, sib in enumerate(siblings):
+        val = sib.get(subfield)
+        if val is not None:
+            return _make_result(
+                pdf_field_name, pdf_field_alt, str(val), "medium",
+                f"siblings[{i}].{subfield}",
+            )
+    if siblings:
+        return _make_result(
+            pdf_field_name, pdf_field_alt, None, "none",
+            f"no value for siblings[*].{subfield} in profile",
+        )
+    return _make_result(
+        pdf_field_name, pdf_field_alt, None, "none",
+        "no siblings array in profile",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Race / ethnicity checkbox special resolver
+# ---------------------------------------------------------------------------
+
+_RACE_CHECKBOX_LABELS: frozenset = frozenset({
+    "asian",
+    "black",
+    "white",
+    "native american or alaska native",
+    "native hawaiian or other pacific islander",
+    "african american",
+    "other african",
+    "other black",
+    "burundian",
+    "eritrean",
+    "ethiopian",
+    "somali",
+    "alaska native",
+    "burns paiute tribe",
+    "confederated tribes of siletz indians",
+    "confederated tribes of the grand ronde community of oregon",
+    "confederated tribes of the umatilla indian reservation",
+    "confederated tribes of the coos lower umpqua and",
+    "klamath tribes",
+    "caribbean islands",
+})
+
+_ETHNICITY_CHECKBOX_LABELS: frozenset = frozenset({
+    "hispanic or latino",
+    "is your child of hispanic or latino origin",
+})
+
+
+def _is_race_ethnicity_field(norm_name: str, norm_alt: str) -> bool:
+    """True when the field is a race or ethnicity checkbox/question."""
+    for raw in (norm_name, norm_alt):
+        s = re.sub(r"^\d+\s*", "", raw).strip()
+        if s in _RACE_CHECKBOX_LABELS:
+            return True
+        if s in _ETHNICITY_CHECKBOX_LABELS:
+            return True
+        if any(t in s for t in _ETHNICITY_CHECKBOX_LABELS):
+            return True
+    return False
+
+
+def _resolve_race_ethnicity(
+    pdf_field_name: str,
+    pdf_field_alt: str,
+    norm_name: str,
+    norm_alt: str,
+    profile: dict,
+) -> dict:
+    """Fill race/ethnicity checkboxes from demographics.race / demographics.ethnicity_hispanic_or_latino."""
+    demographics = profile.get("demographics") or {}
+    if not demographics:
+        return _make_result(
+            pdf_field_name, pdf_field_alt, None, "none",
+            "demographics not in profile — add demographics.race / demographics.ethnicity_hispanic_or_latino",
+        )
+    race = (demographics.get("race") or "").lower()
+    eth_hispanic = demographics.get("ethnicity_hispanic_or_latino")
+
+    for raw in (norm_name, norm_alt):
+        s = re.sub(r"^\d+\s*", "", raw).strip()
+
+        # Ethnicity question
+        if s in _ETHNICITY_CHECKBOX_LABELS or any(t in s for t in _ETHNICITY_CHECKBOX_LABELS):
+            if eth_hispanic is None:
+                return _make_result(
+                    pdf_field_name, pdf_field_alt, None, "none",
+                    "demographics.ethnicity_hispanic_or_latino not set",
+                )
+            value = "Yes" if eth_hispanic else "No"
+            return _make_result(
+                pdf_field_name, pdf_field_alt, value, "high",
+                f"demographics.ethnicity_hispanic_or_latino → {value}",
+            )
+
+        # Race checkbox
+        if s in _RACE_CHECKBOX_LABELS:
+            if not race:
+                return _make_result(
+                    pdf_field_name, pdf_field_alt, None, "none",
+                    "demographics.race not set",
+                )
+            is_match = (s in race) or (race in s)
+            value = "Yes" if is_match else "Off"
+            return _make_result(
+                pdf_field_name, pdf_field_alt, value, "high",
+                f"demographics.race ({race!r}) → {value} for '{s}'",
+            )
+
+    return _make_result(
+        pdf_field_name, pdf_field_alt, None, "none",
+        "race/ethnicity data insufficient to determine checkbox value",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Language field special resolver
+# ---------------------------------------------------------------------------
+
+_LANGUAGE_PREF_KEYS: frozenset = frozenset({"prefer", "preferred", "receive", "communication"})
+_LANGUAGE_FIRST_KEYS: frozenset = frozenset({"first", "learned"})
+_LANGUAGE_HOME_KEYS: frozenset = frozenset({"home", "primarily", "frequently", "most", "speak"})
+
+
+def _is_language_field(norm_name: str, norm_alt: str) -> str | None:
+    """Return the demographics dot-path to resolve if this is a language field, else None."""
+    for s in (norm_name, norm_alt):
+        if "language" not in s:
+            continue
+        if any(k in s for k in _LANGUAGE_PREF_KEYS):
+            return "demographics.preferred_school_communication_language"
+        if any(k in s for k in _LANGUAGE_FIRST_KEYS):
+            return "demographics.first_language_learned"
+        if any(k in s for k in _LANGUAGE_HOME_KEYS):
+            return "demographics.home_language"
+        return "demographics.primary_language"
+    return None
+
+
+def _resolve_language_field(
+    pdf_field_name: str,
+    pdf_field_alt: str,
+    dot_path: str,
+    profile: dict,
+) -> dict:
+    value = _resolve_and_format(profile, dot_path, None)
+    if value is None:
+        return _make_result(
+            pdf_field_name, pdf_field_alt, None, "none",
+            f"{dot_path} not set in profile",
+        )
+    return _make_result(
+        pdf_field_name, pdf_field_alt, value, "high",
+        f"language field → {dot_path}",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -391,6 +598,24 @@ def map_pdf_field(
     # Signature-adjacent date field (today's date injection)
     if _is_signature_date(norm_name, norm_alt):
         return _resolve_today_date(pdf_field_name, pdf_field_alt, today)
+
+    # Race / ethnicity checkboxes
+    if _is_race_ethnicity_field(norm_name, norm_alt):
+        return _resolve_race_ethnicity(
+            pdf_field_name, pdf_field_alt, norm_name, norm_alt, resolved_profile
+        )
+
+    # Language fields (labels containing "language" with contextual keywords)
+    lang_path = _is_language_field(norm_name, norm_alt)
+    if lang_path:
+        return _resolve_language_field(pdf_field_name, pdf_field_alt, lang_path, resolved_profile)
+
+    # Sibling fields
+    sibling_subfield = _is_sibling_field(norm_name, norm_alt)
+    if sibling_subfield:
+        return _resolve_sibling(
+            pdf_field_name, pdf_field_alt, sibling_subfield, resolved_profile, today
+        )
 
     # ------------------------------------------------------------------
     # 2. Synonym lookup
