@@ -102,6 +102,8 @@ def _run_resolve(
         sys.exit(1)
 
     overrides: dict[str, str | None] = {}
+    learning_candidates: list[dict] = []
+
     for field in dry_result["fields"]:
         if field.get("confidence") != "low":
             continue
@@ -122,6 +124,14 @@ def _run_resolve(
 
         if choice in ("Y", ""):
             overrides[field["name"]] = field["mapped_value"]
+            dot_path = _dot_path_from_source(field.get("source", ""))
+            if dot_path:
+                learning_candidates.append({
+                    "pdf_field_name": field["name"],
+                    "pdf_field_alt": field.get("alt", ""),
+                    "dot_path": dot_path,
+                    "action": "confirmed",
+                })
         elif choice == "N":
             if not alts:
                 print("  (no alternatives) keeping original.")
@@ -131,7 +141,14 @@ def _run_resolve(
                 pick = input().strip()
                 try:
                     idx = int(pick) - 1
-                    overrides[field["name"]] = alts[idx]["candidate_value"]
+                    chosen_alt = alts[idx]
+                    overrides[field["name"]] = chosen_alt["candidate_value"]
+                    learning_candidates.append({
+                        "pdf_field_name": field["name"],
+                        "pdf_field_alt": field.get("alt", ""),
+                        "dot_path": chosen_alt["candidate_source"],
+                        "action": "alternative_picked",
+                    })
                 except (ValueError, IndexError):
                     print("  Invalid pick — keeping original.")
                     overrides[field["name"]] = field["mapped_value"]
@@ -139,6 +156,7 @@ def _run_resolve(
             print("  Enter value: ", end="", flush=True)
             raw_val = input().strip()
             overrides[field["name"]] = raw_val or None
+            # E values: no dot_path can be inferred — skip from learning
         elif choice == "S":
             overrides[field["name"]] = None
         else:
@@ -161,7 +179,111 @@ def _run_resolve(
         print(json.dumps(result, indent=2))
     else:
         print(_render_human(result))
+
+    _offer_learning(learning_candidates, template_pdf, profile)
     sys.exit(0)
+
+
+def _dot_path_from_source(source: str) -> str | None:
+    """Extract dot_path from a source string like 'token → dot.path'."""
+    if " → " in source:
+        return source.split(" → ")[-1].strip()
+    return None
+
+
+def _offer_learning(
+    candidates: list[dict],
+    template_pdf: Path,
+    profile: dict,
+) -> None:
+    """Batch learning prompt: offer to save resolved fields as learned synonyms."""
+    if not candidates or not sys.stdin.isatty():
+        return
+
+    import learning as _learning
+
+    saveable: list[dict] = []
+    for cand in candidates:
+        token = _learning.derive_token(
+            cand["pdf_field_name"], cand["pdf_field_alt"]
+        )
+        if token is None or _learning.is_pollution_candidate(token):
+            continue
+        saveable.append({**cand, "_token": token})
+
+    if not saveable:
+        return
+
+    n_total = len(candidates)
+    n_saveable = len(saveable)
+    high_volume = n_total > 10
+
+    if high_volume:
+        prompt = (
+            f"\nYou resolved {n_total} fields. Save {n_saveable} as learned synonyms"
+            " so future forms recognize them automatically? [N]o / [Y]es / [P]ick: "
+        )
+    else:
+        prompt = (
+            f"\nYou resolved {n_total} fields. Save {n_saveable} as learned synonyms"
+            " so future forms recognize them automatically? [Y]es / [N]o / [P]ick: "
+        )
+
+    print(prompt, end="", flush=True)
+    choice = input().strip().upper()
+
+    if high_volume and choice not in ("Y", "P"):
+        return
+    if not high_volume and choice not in ("Y", "P"):
+        return
+
+    subset = saveable
+    if choice == "P":
+        print("  Entries to save:")
+        for i, c in enumerate(saveable, 1):
+            print(f"    {i}. [{c['_token']}] → {c['dot_path']} ({c['action']})")
+        print(
+            f"  Enter numbers (1–{len(saveable)}, comma-separated): ",
+            end="", flush=True,
+        )
+        raw = input().strip()
+        try:
+            indices = [int(x.strip()) - 1 for x in raw.split(",")]
+            subset = [saveable[i] for i in indices if 0 <= i < len(saveable)]
+        except (ValueError, IndexError):
+            print("  Invalid selection — saving none.")
+            return
+
+    if not subset:
+        return
+
+    source_form = template_pdf.name
+    profile_id = profile.get("profile_id")
+    entries: dict[str, dict] = {}
+    for cand in subset:
+        token = cand["_token"]
+        entry = _learning.build_entry(
+            dot_path=cand["dot_path"],
+            source_form=source_form,
+            pdf_field_name=cand["pdf_field_name"],
+            pdf_field_alt=cand["pdf_field_alt"],
+            learn_action=cand["action"],
+            profile_id=profile_id,
+            notes=[],
+        )
+        entries[token] = entry
+
+    synonyms_path = Path(__file__).parent / "data" / "synonyms.json"
+    try:
+        _learning.save_learned(entries, synonyms_path)
+        import field_mapper as _fmmod
+        _fmmod.clear_synonyms_cache()
+        print(f"  Saved {len(entries)} learned synonym(s).")
+    except PermissionError:
+        print(
+            "Cannot write synonyms.json: check permissions.",
+            file=sys.stderr,
+        )
 
 
 _SKIP_CONFIDENCES: frozenset = frozenset({"low", "none"})
@@ -582,6 +704,23 @@ def main() -> None:
         print(json.dumps(result, indent=2))
     else:
         print(_render_human(result))
+
+    # Summarize vault-locked fields when committing (not commit-unsafe)
+    if want_commit and not args.commit_unsafe:
+        vault_locked = [
+            f for f in result["fields"]
+            if f.get("confidence") == "none"
+            and any(
+                "Vault locked" in (n or "")
+                for n in (f.get("notes") or [])
+            )
+        ]
+        if vault_locked:
+            print(
+                f"Note: {len(vault_locked)} vault-backed field(s) skipped (vault locked)."
+                " Run 'bw unlock' and re-run to include them.",
+                file=sys.stderr,
+            )
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from datetime import date
 from pathlib import Path
 
@@ -12,6 +13,12 @@ import emergency_contact as _ec
 
 _SYNONYMS_PATH = Path(__file__).parent / "data" / "synonyms.json"
 _synonyms_cache: dict | None = None
+
+
+def clear_synonyms_cache() -> None:
+    """Invalidate the in-process synonyms cache (used after learning saves)."""
+    global _synonyms_cache
+    _synonyms_cache = None
 
 _CONTEXT_RULES_PATH = Path(__file__).parent / "data" / "field_context_rules.json"
 _context_rules_cache: list | None = None
@@ -36,18 +43,31 @@ def _load_context_rules() -> list:
 def _is_permitted_by_context(
     dot_path: str, profile_id: str | None, norm_name: str, norm_alt: str
 ) -> bool:
-    """Return False when a context rule blocks this dot_path for the given field label."""
+    """Return False when a context rule blocks this dot_path for the given field label.
+
+    Rules with no profile_id (null) are universal — they apply to all profiles.
+    block_if_keywords_present takes priority: if any blocking keyword appears in
+    the field label, the rule immediately denies regardless of permit keywords.
+    """
     for rule in _load_context_rules():
-        if rule.get("profile_id") != profile_id:
+        rule_profile = rule.get("profile_id")
+        # Universal rules (null profile_id) apply to everyone; others must match.
+        if rule_profile is not None and rule_profile != profile_id:
             continue
         if rule.get("dot_path") != dot_path:
             continue
-        # Rule applies — require a permit keyword in the combined field label.
         combined = f"{norm_name} {norm_alt}"
-        keywords = rule.get("keywords_that_permit_use", [])
-        if any(kw.lower() in combined for kw in keywords):
-            return True
-        return False
+        # Block keywords: any match → immediate deny.
+        block_kws = rule.get("block_if_keywords_present", [])
+        if block_kws and any(kw.lower() in combined for kw in block_kws):
+            return False
+        # Permit keywords: at least one must be present.
+        permit_kws = rule.get("keywords_that_permit_use", [])
+        if permit_kws:
+            if any(kw.lower() in combined for kw in permit_kws):
+                return True
+            return False
+        return True
     return True
 
 
@@ -57,12 +77,36 @@ def _load_synonyms() -> dict:
         with _SYNONYMS_PATH.open() as f:
             raw = json.load(f)
         flat: dict[str, str] = {}
+        learned_section: dict | None = None
+
+        # First pass: all curated sections (non-underscore, non-learned)
         for key, val in raw.items():
             if key.startswith("_"):
+                continue
+            if key == "learned":
+                learned_section = val
                 continue
             if isinstance(val, dict):
                 for token, path in val.items():
                     flat[token.lower()] = path
+
+        # Second pass: learned section overrides curated (processed last)
+        if learned_section:
+            for token, entry in learned_section.items():
+                if not isinstance(entry, dict):
+                    continue
+                dot_path = entry.get("dot_path")
+                if not dot_path:
+                    continue
+                tok_lower = token.lower()
+                if tok_lower in flat:
+                    print(
+                        f"[synonyms] WARNING: learned token '{token}' shadows "
+                        f"curated entry '{flat[tok_lower]}'",
+                        file=sys.stderr,
+                    )
+                flat[tok_lower] = dot_path
+
         _synonyms_cache = flat
     return _synonyms_cache
 
@@ -101,11 +145,18 @@ def _score_match(token: str, norm: str) -> float:
     """Score how well a synonym token matches a normalised field label.
 
     Returns 1.0 for exact, len(token)/len(norm) for substring, 0.0 if absent.
+    Single-word tokens require a letter-boundary match to prevent false positives
+    like "name" matching "Vietnamese" or "city" matching "electricity".
     """
     if not norm:
         return 0.0
     if token == norm:
         return 1.0
+    # Single-word tokens: must not be preceded or followed by another letter.
+    # Digits/spaces/start/end are all fine (e.g. "zip" in "13zip" → ok).
+    if " " not in token:
+        if not re.search(r"(?<![a-z])" + re.escape(token) + r"(?![a-z])", norm):
+            return 0.0
     if token in norm:
         return len(token) / len(norm)
     return 0.0
@@ -347,6 +398,7 @@ def map_pdf_field(
     synonyms = _load_synonyms()
     best_by_path: dict[str, dict] = {}
     profile_id = resolved_profile.get("profile_id")
+    vault_failed: list[dict] = []
 
     for raw_label in (pdf_field_name, pdf_field_alt):
         if not raw_label:
@@ -360,9 +412,60 @@ def map_pdf_field(
             # Discard scores below the weak threshold — they are noise, not matches.
             if score < _WEAK_MATCH_THRESHOLD:
                 continue
-            value = _resolve_and_format(resolved_profile, dot_path, today)
-            if value is None:
-                continue
+
+            # Vault-reference paths: lazy dereference via bw CLI
+            if dot_path.startswith("vault_references."):
+                raw_pointer = _resolve_path(resolved_profile, dot_path)
+                if raw_pointer is None:
+                    continue
+                from lib import vault as _vault
+                try:
+                    item_name, field_name = _vault.resolve_pointer(raw_pointer)
+                    secret = _vault.get(item_name, field_name)
+                    if secret is None:
+                        continue
+                    value = secret
+                except _vault.VaultLocked as exc:
+                    vault_failed.append({
+                        "dot_path": dot_path,
+                        "item": str(raw_pointer),
+                        "error": "locked",
+                        "score": round(score, 4),
+                        "detail": str(exc),
+                    })
+                    continue
+                except _vault.VaultBinaryMissing as exc:
+                    vault_failed.append({
+                        "dot_path": dot_path,
+                        "item": str(raw_pointer),
+                        "error": "no_binary",
+                        "score": round(score, 4),
+                        "detail": str(exc),
+                    })
+                    continue
+                except _vault.VaultItemNotFound as exc:
+                    vault_failed.append({
+                        "dot_path": dot_path,
+                        "item": str(raw_pointer),
+                        "error": "not_found",
+                        "score": round(score, 4),
+                        "detail": str(exc),
+                    })
+                    continue
+                except _vault.VaultError as exc:
+                    vault_failed.append({
+                        "dot_path": dot_path,
+                        "item": str(raw_pointer),
+                        "error": "error",
+                        "score": round(score, 4),
+                        "detail": str(exc),
+                    })
+                    continue
+            else:
+                value = _resolve_and_format(resolved_profile, dot_path, today)
+                if value is None:
+                    continue
+
             # Skip candidates blocked by context rules.
             if not _is_permitted_by_context(dot_path, profile_id, norm_name, norm_alt):
                 continue
@@ -375,6 +478,33 @@ def map_pdf_field(
                     "value": value,
                     "score": round(score, 4),
                 }
+
+    # ------------------------------------------------------------------
+    # 2b. Vault-failure fallback: if no non-vault candidates matched but vault
+    #     fields were attempted, return a vault-specific confidence='none' result.
+    # ------------------------------------------------------------------
+    if not best_by_path and vault_failed:
+        best_vf = max(vault_failed, key=lambda x: x["score"])
+        error_type = best_vf["error"]
+        dot_path_vf = best_vf["dot_path"]
+        item_vf = best_vf["item"]
+        if error_type == "locked":
+            source_vf = f"{dot_path_vf} → bw item '{item_vf}' (locked)"
+            notes_vf = [
+                "Vault locked: run 'bw unlock' and set BW_SESSION to dereference."
+            ]
+        elif error_type == "no_binary":
+            source_vf = f"{dot_path_vf} → bw item '{item_vf}' (bw not installed)"
+            notes_vf = ["Bitwarden CLI not found. Install with: brew install bitwarden-cli"]
+        elif error_type == "not_found":
+            source_vf = f"{dot_path_vf} → bw item '{item_vf}' not found"
+            notes_vf = [f"Bitwarden item '{item_vf}' not found. Check your vault."]
+        else:
+            source_vf = f"{dot_path_vf} → bw item '{item_vf}' (error)"
+            notes_vf = [f"Vault lookup failed: {best_vf.get('detail', '')}"]
+        return _make_result(
+            pdf_field_name, pdf_field_alt, None, "none", source_vf, notes=notes_vf
+        )
 
     # ------------------------------------------------------------------
     # 3. Section-hint: inject PCP candidates for generic field labels

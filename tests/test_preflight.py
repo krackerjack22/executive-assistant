@@ -166,3 +166,41 @@ def test_preflight_cli_missing_index_exit_1(tmp_path):
     data = json.loads(result.stdout)
     codes = [i["code"] for i in data["issues"]]
     assert "PROFILES_INDEX_MISSING" in codes
+
+
+# ---------------------------------------------------------------------------
+# BW_SESSION warning tests (#12)
+# ---------------------------------------------------------------------------
+
+def test_bw_session_warning_emitted_when_bw_present_and_session_missing(monkeypatch):
+    """Warning BW_SESSION_NOT_SET appears when bw binary exists but BW_SESSION is absent."""
+    from lib import preflight
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/local/bin/bw" if name == "bw" else None)
+    monkeypatch.delenv("BW_SESSION", raising=False)
+
+    result = preflight.run(output_dir=preflight.Path.cwd())
+    codes = [w["code"] for w in result["warnings"]]
+    assert "BW_SESSION_NOT_SET" in codes
+
+
+def test_bw_session_warning_suppressed_when_bw_absent(monkeypatch):
+    """No BW_SESSION_NOT_SET warning when bw binary is not installed."""
+    from lib import preflight
+    original_which = __import__("shutil").which
+    monkeypatch.setattr("shutil.which", lambda name: None if name == "bw" else original_which(name))
+    monkeypatch.delenv("BW_SESSION", raising=False)
+
+    result = preflight.run(output_dir=preflight.Path.cwd())
+    codes = [w["code"] for w in result["warnings"]]
+    assert "BW_SESSION_NOT_SET" not in codes
+
+
+def test_bw_session_warning_absent_when_session_set(monkeypatch):
+    """No BW_SESSION_NOT_SET warning when BW_SESSION is set, even if bw is installed."""
+    from lib import preflight
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/local/bin/bw" if name == "bw" else None)
+    monkeypatch.setenv("BW_SESSION", "some-token")
+
+    result = preflight.run(output_dir=preflight.Path.cwd())
+    codes = [w["code"] for w in result["warnings"]]
+    assert "BW_SESSION_NOT_SET" not in codes

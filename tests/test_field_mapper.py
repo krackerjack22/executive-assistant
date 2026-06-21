@@ -311,3 +311,231 @@ def test_source_explanation_present_all_fields():
     for name, alt in _SYNTHETIC_FIELDS:
         r = fm.map_pdf_field(name, alt, tyler, idx)
         assert isinstance(r["source"], str) and len(r["source"]) > 0
+
+
+# ---------------------------------------------------------------------------
+# Learned synonym loader tests (#10)
+# ---------------------------------------------------------------------------
+
+import json
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
+
+
+def _make_synonyms_with_learned(tmp_path: Path, learned: dict) -> Path:
+    """Write a minimal synonyms.json with a learned section to tmp_path."""
+    data = {
+        "_version": "1.2",
+        "identity": {"patient name": "identity.legal_name"},
+        "learned": learned,
+    }
+    syn_file = tmp_path / "synonyms.json"
+    syn_file.write_text(json.dumps(data))
+    return syn_file
+
+
+def test_loader_reads_learned_dict_shape(tmp_path):
+    """Loader reads a learned entry with {'dot_path': ...} shape and maps it correctly."""
+    syn_file = _make_synonyms_with_learned(tmp_path, {
+        "subscriber name": {
+            "dot_path": "identity.legal_name",
+            "source_form": "Test.pdf",
+            "learned_at": "2026-06-20T00:00:00Z",
+            "times_seen": 1,
+            "learn_action": "confirmed",
+            "profile_id_at_learn": "tyler_combs",
+            "notes": [],
+        }
+    })
+
+    fm.clear_synonyms_cache()
+    with patch.object(fm, "_SYNONYMS_PATH", syn_file):
+        fm.clear_synonyms_cache()
+        synonyms = fm._load_synonyms()
+
+    assert "subscriber name" in synonyms
+    assert synonyms["subscriber name"] == "identity.legal_name"
+    fm.clear_synonyms_cache()  # restore for other tests
+
+
+def test_loader_learned_overrides_curated(tmp_path, capsys):
+    """Learned entry with same token as curated → loader picks learned; warning emitted."""
+    # "patient name" maps to identity.legal_name in curated; learned overrides to identity.first_name
+    syn_file = _make_synonyms_with_learned(tmp_path, {
+        "patient name": {
+            "dot_path": "identity.first_name",
+            "source_form": "Test.pdf",
+            "learned_at": "2026-06-20T00:00:00Z",
+            "times_seen": 1,
+            "learn_action": "confirmed",
+            "profile_id_at_learn": "tyler_combs",
+            "notes": [],
+        }
+    })
+
+    fm.clear_synonyms_cache()
+    with patch.object(fm, "_SYNONYMS_PATH", syn_file):
+        fm.clear_synonyms_cache()
+        synonyms = fm._load_synonyms()
+
+    # Learned value wins
+    assert synonyms["patient name"] == "identity.first_name"
+    # Warning was printed to stderr
+    captured = capsys.readouterr()
+    assert "shadows" in captured.err or "WARNING" in captured.err
+
+    fm.clear_synonyms_cache()  # restore for other tests
+
+
+# ---------------------------------------------------------------------------
+# Vault integration tests (#12)
+# ---------------------------------------------------------------------------
+
+from unittest.mock import patch as _patch
+from lib import vault as _vault_mod
+
+
+@pytest.fixture(autouse=False)
+def _reset_vault_cache():
+    _vault_mod.clear_cache()
+    yield
+    _vault_mod.clear_cache()
+
+
+def _tyler_with_vault_ref():
+    """Load tyler profile and inject a non-null vault_references.ssn pointer."""
+    profile = _tyler()
+    profile.setdefault("vault_references", {})["ssn"] = "tyler-ssn"
+    return profile
+
+
+def test_vault_reference_with_locked_vault_returns_none_with_note(_reset_vault_cache, monkeypatch):
+    """vault_references.ssn with locked vault → confidence='none', note mentions vault lock."""
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/local/bin/bw" if name == "bw" else None)
+    monkeypatch.delenv("BW_SESSION", raising=False)
+
+    profile = _tyler_with_vault_ref()
+    r = fm.map_pdf_field("ssn", "Social Security Number", profile, _index())
+
+    assert r["confidence"] == "none"
+    assert r["value"] is None
+    notes_combined = " ".join(r.get("notes") or [])
+    assert "locked" in notes_combined.lower() or "vault" in notes_combined.lower()
+
+
+def test_vault_reference_with_unlocked_vault_returns_value(_reset_vault_cache, monkeypatch):
+    """vault_references.ssn with unlocked vault → value returned, confidence='high'."""
+    import subprocess as _subprocess
+    from unittest.mock import MagicMock
+
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/local/bin/bw" if name == "bw" else None)
+    monkeypatch.setenv("BW_SESSION", "fake-token")
+
+    item_json = __import__("json").dumps({"notes": "123-45-6789", "fields": []})
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = item_json
+    mock_result.stderr = ""
+
+    profile = _tyler_with_vault_ref()
+
+    with _patch("subprocess.run", return_value=mock_result):
+        r = fm.map_pdf_field("ssn", "Social Security Number", profile, _index())
+
+    assert r["value"] == "123-45-6789"
+    assert r["confidence"] in ("high", "medium")
+
+
+# ---------------------------------------------------------------------------
+# Bug fix: word-boundary scoring (_score_match)
+# ---------------------------------------------------------------------------
+
+def test_vietnamese_does_not_match_legal_name():
+    """Token 'name' must not match 'Vietnamese' — word-boundary check required."""
+    tyler = _tyler()
+    r = fm.map_pdf_field("19vietnamese", "19. Vietnamese", tyler, _index())
+    # If a value is returned it must not be the legal name
+    if r["value"] is not None:
+        legal_name = tyler.get("identity", {}).get("legal_name")
+        assert r["value"] != legal_name, (
+            "'name' token matched 'Vietnamese' via substring — word-boundary fix missing"
+        )
+
+
+def test_city_does_not_match_electricity():
+    """Token 'city' must not match 'electricity' — letter-boundary check."""
+    tyler = _tyler()
+    r = fm.map_pdf_field("electricity", "Electricity", tyler, _index())
+    city = tyler.get("addresses", {}).get("home", {}).get("city")
+    if city:
+        assert r["value"] != city
+
+
+def test_name_still_matches_patient_name():
+    """Word-boundary fix must not break normal 'name' → 'patient name' matching."""
+    tyler = _tyler()
+    r = fm.map_pdf_field("patient name", "Patient Name", tyler, _index())
+    legal_name = tyler.get("identity", {}).get("legal_name")
+    if legal_name:
+        assert r["value"] is not None  # should still resolve
+
+
+# ---------------------------------------------------------------------------
+# Bug fix: context rule blocks street_1 for 'email address' fields
+# ---------------------------------------------------------------------------
+
+def _tyler_no_email():
+    """Tyler profile with contact.email set to None to simulate missing email."""
+    profile = _tyler()
+    if "contact" not in profile:
+        profile["contact"] = {}
+    profile["contact"]["email"] = None
+    return profile
+
+
+def test_street_not_returned_for_email_address_field():
+    """addresses.home.street_1 must be blocked when 'email' appears in the field label."""
+    profile = _tyler_no_email()
+    r = fm.map_pdf_field("email address", "Email Address", profile, _index())
+    street = profile.get("addresses", {}).get("home", {}).get("street_1")
+    if street:
+        assert r["value"] != street, (
+            "Street address must not be returned for an 'Email Address' field"
+        )
+
+
+def test_street_not_returned_for_student_email_field():
+    """Universal block rule covers any label containing 'email', not just exact match."""
+    profile = _tyler_no_email()
+    r = fm.map_pdf_field("student email address", "9 Student Email Address", profile, _index())
+    street = profile.get("addresses", {}).get("home", {}).get("street_1")
+    if street:
+        assert r["value"] != street
+
+
+def test_street_still_returned_for_address_field():
+    """Block rule for 'email' must not prevent street_1 from matching a plain address field."""
+    tyler = _tyler()
+    r = fm.map_pdf_field("street address", "Address", tyler, _index())
+    street = tyler.get("addresses", {}).get("home", {}).get("street_1")
+    if street:
+        assert r["value"] is not None  # address field must still resolve
+
+
+def test_universal_context_rule_applies_to_non_tyler_profile():
+    """block_if_keywords_present rule with no profile_id blocks for any profile."""
+    from lib import profile_loader as _pl
+    try:
+        profile = _pl.load_profile("charlotte_combs")
+    except Exception:
+        pytest.skip("charlotte_combs profile not available")
+    r = fm.map_pdf_field("email address", "Email Address", profile, _index())
+    street = (
+        profile.get("addresses", {}).get("home", {}).get("street_1")
+        or profile.get("addresses", {}).get("home", {}).get("street1")
+    )
+    if street:
+        assert r["value"] != street, (
+            "Universal block rule did not apply to charlotte_combs"
+        )

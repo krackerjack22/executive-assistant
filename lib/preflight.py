@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.metadata
 import json
+import os
 import platform
 import shutil
 import socket
@@ -158,6 +159,20 @@ def run(output_dir: Path | None = None) -> dict:
         "required": required_modules,
         "optional": {**optional_modules, **optional_binaries},
     }
+
+    # Warn when bw is installed but BW_SESSION is absent (vault-backed fields won't resolve)
+    if optional_binaries["bw"] and not os.environ.get("BW_SESSION"):
+        warnings.append({
+            "code": "BW_SESSION_NOT_SET",
+            "message": (
+                "Bitwarden CLI found but BW_SESSION is not set. "
+                "Vault-backed fields will not be resolved."
+            ),
+            "fix": (
+                "Run 'bw unlock' and export the printed BW_SESSION env var "
+                "to use vault-backed fields."
+            ),
+        })
 
     actionable = list(dict.fromkeys(
         item["fix"] for item in (issues + warnings) if item.get("fix")

@@ -21,6 +21,13 @@
       ],
       "learned_from": "User instruction, session 2026-06-19",
       "keywords_that_permit_use": ["trust", "grantor", "grantee", "beneficiary", "fiduciary", "title holder", "owner of record", "entity name", "estate"]
+    },
+    {
+      "dot_path": "addresses.home.street_1",
+      "value_description": "Home street address line 1",
+      "restriction": "Must not be used for email fields. 'Email address' contains the word 'address' but refers to an electronic address, not a physical street address.",
+      "block_if_keywords_present": ["email"],
+      "learned_from": "Dry-run on student-registration-form-en, session 2026-06-21"
     }
   ]
 }

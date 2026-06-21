@@ -20,7 +20,7 @@ Shared library in `lib/`. All personal data lives in JSON profile files at
 `~/Assets_Library/Executive-Assistant/profiles/` — never in code.
 
 **Current state (post tier 1–3 implementation):**
-- 185 tests passing
+- 230 tests passing (185 original + 22 from #10 + 23 from #12)
 - Python 3.9.6 (`/usr/bin/python3`), pypdf 6.11.0, pdfplumber
 - `lib/` contains: `env.py`, `preflight.py`, `profile_loader.py`,
   `profile_writer.py`, `address_resolver.py`, `role_resolver.py`
