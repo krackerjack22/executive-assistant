@@ -76,6 +76,7 @@ def _run_resolve(
     index: dict,
     output_pdf: Path,
     use_json: bool,
+    qa_corrections: dict | None = None,
 ) -> None:
     """Interactive resolution of low-confidence fields, then commit."""
     if dry_result["low_count"] == 0:
@@ -86,6 +87,7 @@ def _run_resolve(
             index=index,
             output_pdf=output_pdf,
             dry_run=False,
+            field_overrides=qa_corrections or {},
         )
         if use_json:
             print(json.dumps(result, indent=2))
@@ -174,6 +176,7 @@ def _run_resolve(
         index=index,
         output_pdf=output_pdf,
         dry_run=False,
+        field_overrides={**overrides, **(qa_corrections or {})},
     )
     if use_json:
         print(json.dumps(result, indent=2))
@@ -335,6 +338,7 @@ def _run_skip_mode(
     index: dict,
     output_pdf: Path,
     use_json: bool,
+    qa_corrections: dict | None = None,
 ) -> None:
     """Fill only high/medium confidence fields; skip low/none and print summary."""
     low_none = [
@@ -353,6 +357,7 @@ def _run_skip_mode(
         output_pdf=output_pdf,
         dry_run=False,
         skip_confidences=_SKIP_CONFIDENCES,
+        field_overrides=qa_corrections or {},
     )
     if use_json:
         print(json.dumps(result, indent=2))
@@ -368,6 +373,7 @@ def _run_manual_mode(
     index: dict,
     output_pdf: Path,
     use_json: bool,
+    qa_corrections: dict | None = None,
 ) -> None:
     """Fill high/medium fields only; write a sidecar .missing.md checklist."""
     result = _acroform.fill(
@@ -377,6 +383,7 @@ def _run_manual_mode(
         output_pdf=output_pdf,
         dry_run=False,
         skip_confidences=_SKIP_CONFIDENCES,
+        field_overrides=qa_corrections or {},
     )
 
     missing = [
@@ -415,6 +422,7 @@ def _run_interview_mode(
     index: dict,
     output_pdf: Path,
     use_json: bool,
+    qa_corrections: dict | None = None,
 ) -> None:
     """Interactively collect values for none-confidence fields, then fill and write back."""
     if not sys.stdin.isatty():
@@ -438,6 +446,7 @@ def _run_interview_mode(
             index=index,
             output_pdf=output_pdf,
             dry_run=False,
+            field_overrides=qa_corrections or {},
         )
         if use_json:
             print(json.dumps(result, indent=2))
@@ -473,6 +482,7 @@ def _run_interview_mode(
             output_pdf=output_pdf,
             dry_run=False,
             skip_confidences=_SKIP_CONFIDENCES,
+            field_overrides=qa_corrections or {},
         )
         if use_json:
             print(json.dumps(result, indent=2))
@@ -498,7 +508,7 @@ def _run_interview_mode(
         output_pdf=output_pdf,
         dry_run=False,
         skip_confidences=_SKIP_CONFIDENCES,
-        field_overrides=user_answers,
+        field_overrides={**user_answers, **(qa_corrections or {})},
     )
 
     # Write back to profile (one source_note per answered field)
@@ -541,6 +551,74 @@ def _collect_batch(batch: list[dict], answers: dict[str, str]) -> None:
         val = input().strip()
         if val:
             answers[f["name"]] = val
+
+
+def _run_qa_pass(
+    dry_result: dict,
+    template_pdf: Path,
+    profile: dict,
+    model: str,
+) -> dict[str, str | None]:
+    """Run the LLM QA review; return a dict of accepted field corrections.
+
+    Interactively prompts the user to accept or reject each suggested correction
+    when running in a tty. In non-interactive mode, issues are printed but no
+    corrections are applied (re-run interactively to apply them).
+
+    Returns:
+        Mapping of ``{pdf_field_name: corrected_value}`` for accepted corrections.
+        Empty dict if no issues found or none accepted.
+    """
+    import qa_reviewer
+
+    print("\n[QA] Running LLM review — this may take a few seconds...")
+    try:
+        issues = qa_reviewer.review_fills(
+            dry_result["fields"], template_pdf, profile, model
+        )
+    except RuntimeError as exc:
+        print(f"[QA] Skipped: {exc}", file=sys.stderr)
+        return {}
+
+    if not issues:
+        print("[QA] No contextual issues found.")
+        return {}
+
+    print(f"\n[QA] {len(issues)} issue(s) found:")
+    corrections: dict[str, str | None] = {}
+
+    if not sys.stdin.isatty():
+        for issue in issues:
+            print(
+                f"  [{issue.get('confidence', '?')}] {issue['field_name']!r}: "
+                f"{issue.get('current_value')!r} → {issue.get('suggested_value')!r}"
+            )
+            print(f"    {issue.get('reason', '')}")
+        print(
+            "\n[QA] Non-interactive mode — corrections not applied. "
+            "Re-run in a terminal to apply them."
+        )
+        return {}
+
+    for issue in issues:
+        field = issue.get("field_name", "")
+        cur = issue.get("current_value")
+        sug = issue.get("suggested_value")
+        reason = issue.get("reason", "")
+        print(f"\n  Field:     {field!r}")
+        print(f"  Current:   {cur!r}")
+        print(f"  Suggested: {sug!r}")
+        print(f"  Reason:    {reason}")
+        print("  Apply? [Y]es / [N]o (default N): ", end="", flush=True)
+        choice = input().strip().upper()
+        if choice == "Y":
+            corrections[field] = sug
+
+    if corrections:
+        print(f"\n[QA] Accepted {len(corrections)} correction(s).")
+    else:
+        print("\n[QA] No corrections accepted.")
+    return corrections
 
 
 def main() -> None:
@@ -601,6 +679,22 @@ def main() -> None:
             "interview=prompt user interactively."
         ),
     )
+    parser.add_argument(
+        "--qa",
+        action="store_true",
+        help=(
+            "Run a Claude LLM quality-assurance pass after the fill to catch "
+            "section-context errors (e.g. sibling fields filled with subject data). "
+            "Requires ANTHROPIC_API_KEY to be set."
+        ),
+    )
+    parser.add_argument(
+        "--qa-model",
+        default="claude-haiku-4-5-20251001",
+        dest="qa_model",
+        metavar="MODEL",
+        help="Claude model ID to use for --qa (default: claude-haiku-4-5-20251001).",
+    )
 
     args = parser.parse_args()
 
@@ -652,24 +746,43 @@ def main() -> None:
         dry_run=True,
     )
 
+    # Optional LLM QA pass — flags section-context errors before commit
+    qa_corrections: dict[str, str | None] = {}
+    if args.qa:
+        qa_corrections = _run_qa_pass(dry_result, args.template, profile, args.qa_model)
+        for field in dry_result["fields"]:
+            if field["name"] in qa_corrections:
+                field["mapped_value"] = qa_corrections[field["name"]]
+                field.setdefault("notes", []).append("[QA-corrected]")
+
     # --missing-mode: handle missing/low-confidence fields
     if args.missing_mode == "skip":
-        _run_skip_mode(dry_result, args.template, profile, index, output_pdf, use_json)
+        _run_skip_mode(
+            dry_result, args.template, profile, index, output_pdf, use_json,
+            qa_corrections=qa_corrections,
+        )
         return  # always calls sys.exit()
 
     if args.missing_mode == "manual":
-        _run_manual_mode(dry_result, args.template, profile, index, output_pdf, use_json)
+        _run_manual_mode(
+            dry_result, args.template, profile, index, output_pdf, use_json,
+            qa_corrections=qa_corrections,
+        )
         return  # always calls sys.exit()
 
     if args.missing_mode == "interview":
         _run_interview_mode(
-            dry_result, args.template, profile, args.profile, index, output_pdf, use_json
+            dry_result, args.template, profile, args.profile, index, output_pdf, use_json,
+            qa_corrections=qa_corrections,
         )
         return  # always calls sys.exit()
 
     # --resolve: interactive low-confidence resolution then commit
     if args.resolve:
-        _run_resolve(dry_result, args.template, profile, index, output_pdf, use_json)
+        _run_resolve(
+            dry_result, args.template, profile, index, output_pdf, use_json,
+            qa_corrections=qa_corrections,
+        )
         return  # _run_resolve always calls sys.exit()
 
     want_commit = args.commit or args.commit_unsafe
@@ -696,6 +809,7 @@ def main() -> None:
             index=index,
             output_pdf=output_pdf,
             dry_run=False,
+            field_overrides=qa_corrections or {},
         )
     else:
         result = dry_result
