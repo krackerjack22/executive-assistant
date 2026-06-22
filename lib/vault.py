@@ -37,12 +37,22 @@ def is_available() -> dict:
 
 
 def resolve_pointer(pointer: object) -> tuple[str, str]:
-    """Normalize a vault_references entry to (item_name, field_name).
+    """Normalize a vault_references entry to (item_name, field_path).
 
-    Accepts a string (defaults field to 'notes') or a dict
-    {bw_item: str, bw_field: str}. Raises ValueError on malformed input.
+    Accepts:
+      - "bw://uuid/field/path"  →  (uuid, "field/path")
+      - "plain-item-name"       →  ("plain-item-name", "notes")
+      - {"bw_item": str, "bw_field": str}
+    Raises ValueError on malformed input.
     """
     if isinstance(pointer, str):
+        if pointer.startswith("bw://"):
+            # bw://uuid/field/path  →  strip scheme, split on first slash
+            without_scheme = pointer[len("bw://"):]
+            slash = without_scheme.find("/")
+            if slash == -1:
+                return without_scheme, "notes"
+            return without_scheme[:slash], without_scheme[slash + 1:]
         return pointer, "notes"
     if isinstance(pointer, dict):
         item = pointer.get("bw_item")
@@ -71,17 +81,30 @@ def get(item_name: str, field: str = "notes") -> Optional[str]:
 
 
 def _extract_field(item_data: dict, field: str) -> Optional[str]:
-    """Extract a named field value from a parsed BW item dict."""
+    """Extract a named field value from a parsed BW item dict.
+
+    Supports slash-separated paths into nested objects (e.g. "identity/ssn",
+    "login/password"), named custom fields, and the bare "notes" key.
+    """
     if field == "notes":
         return item_data.get("notes") or None
 
-    # Check named custom fields
+    # Slash-separated path into a nested object: "identity/ssn", "login/password"
+    if "/" in field:
+        parts = field.split("/", 1)
+        section = item_data.get(parts[0]) or {}
+        if isinstance(section, dict):
+            val = section.get(parts[1])
+            return str(val) if val is not None else None
+        return None
+
+    # Named custom fields
     for f in item_data.get("fields") or []:
         if (f.get("name") or "").lower() == field.lower():
             val = f.get("value")
             return str(val) if val is not None else None
 
-    # Login sub-fields
+    # Login sub-fields (bare names for backwards compat)
     login = item_data.get("login") or {}
     if field == "username":
         return login.get("username") or None
