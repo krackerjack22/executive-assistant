@@ -1,0 +1,119 @@
+%PDF-1.3
+%‚„œ”
+1 0 obj
+<<
+/Producer (pypdf)
+>>
+endobj
+2 0 obj
+<<
+/Type /Pages
+/Count 1
+/Kids [ 4 0 R ]
+>>
+endobj
+3 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+/AcroForm 10 0 R
+>>
+endobj
+4 0 obj
+<<
+/Type /Page
+/Resources <<
+>>
+/MediaBox [ 0.0 0.0 612 792 ]
+/Parent 2 0 R
+/Annots [ 5 0 R 6 0 R 7 0 R 8 0 R 9 0 R ]
+>>
+endobj
+5 0 obj
+<<
+/Type /Annot
+/Subtype /Widget
+/FT /Tx
+/T (patient name)
+/TU (Patient Name)
+/Rect [ 72 700 400 714 ]
+/V ()
+/DV ()
+>>
+endobj
+6 0 obj
+<<
+/Type /Annot
+/Subtype /Widget
+/FT /Tx
+/T (dob)
+/TU (Date of Birth)
+/Rect [ 72 680 400 694 ]
+/V ()
+/DV ()
+>>
+endobj
+7 0 obj
+<<
+/Type /Annot
+/Subtype /Widget
+/FT /Tx
+/T (ssn)
+/TU (Social Security Number)
+/Rect [ 72 660 400 674 ]
+/V ()
+/DV ()
+>>
+endobj
+8 0 obj
+<<
+/Type /Annot
+/Subtype /Widget
+/FT /Tx
+/T (phone)
+/TU (Phone Number)
+/Rect [ 72 640 400 654 ]
+/V ()
+/DV ()
+>>
+endobj
+9 0 obj
+<<
+/Type /Annot
+/Subtype /Widget
+/FT /Tx
+/T (street address)
+/TU (Street Address)
+/Rect [ 72 620 400 634 ]
+/V ()
+/DV ()
+>>
+endobj
+10 0 obj
+<<
+/Fields [ 5 0 R 6 0 R 7 0 R 8 0 R 9 0 R ]
+/NeedAppearances true
+>>
+endobj
+xref
+0 11
+0000000000 65535 f 
+0000000015 00000 n 
+0000000054 00000 n 
+0000000113 00000 n 
+0000000179 00000 n 
+0000000315 00000 n 
+0000000449 00000 n 
+0000000575 00000 n 
+0000000710 00000 n 
+0000000837 00000 n 
+0000000975 00000 n 
+trailer
+<<
+/Size 11
+/Root 3 0 R
+/Info 1 0 R
+>>
+startxref
+1061
+%%EOF
