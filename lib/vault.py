@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import subprocess
+from pathlib import Path
 from typing import Optional
 
 _SUBPROCESS_TIMEOUT_SEC = 5
@@ -165,6 +166,55 @@ def _cached_bw_call(item_name: str) -> dict:
 
     _bw_cache[item_name] = item_data
     return item_data
+
+
+def unlock_interactive(session_file: Optional[str] = None) -> str:
+    """Prompt for master password, unlock the vault, and persist the session token.
+
+    Runs ``bw unlock --raw`` with its password prompt visible in the terminal.
+    Sets BW_SESSION in the current process environment and writes the token to
+    ``~/.bw_session`` (or *session_file*) for future shell sessions.
+
+    Returns:
+        The new session token string.
+
+    Raises:
+        VaultBinaryMissing: bw CLI not found.
+        VaultError: unlock failed (bad password, network error, etc.).
+    """
+    bw_path = shutil.which("bw")
+    if not bw_path:
+        raise VaultBinaryMissing(
+            "Bitwarden CLI not found. Install with: brew install bitwarden-cli"
+        )
+
+    # stdout=PIPE captures the token; stderr=None lets the password prompt
+    # appear directly in the user's terminal.
+    proc = subprocess.run(
+        [bw_path, "unlock", "--raw"],
+        stdout=subprocess.PIPE,
+        stderr=None,
+        text=True,
+        timeout=60,
+    )
+    token = (proc.stdout or "").strip()
+    if not token or proc.returncode != 0:
+        raise VaultError(
+            "bw unlock failed — check your master password and try again."
+        )
+
+    os.environ["BW_SESSION"] = token
+
+    target = Path(session_file) if session_file else Path.home() / ".bw_session"
+    try:
+        target.write_text(token)
+        target.chmod(0o600)
+        print(f"\n[Vault] Session saved to {target}.")
+    except OSError:
+        pass  # non-fatal if the file can't be written
+
+    clear_cache()
+    return token
 
 
 def clear_cache() -> None:

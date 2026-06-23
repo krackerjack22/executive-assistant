@@ -746,6 +746,30 @@ def main() -> None:
         dry_run=True,
     )
 
+    # Inline Bitwarden unlock — if vault-locked fields exist and we're in a tty,
+    # prompt for master password, re-run the dry run with the fresh session.
+    vault_locked = [
+        f for f in dry_result["fields"]
+        if "(locked)" in (f.get("source") or "")
+    ]
+    if vault_locked and sys.stdin.isatty():
+        print(
+            f"\n[Vault] {len(vault_locked)} field(s) require Bitwarden unlock.",
+            file=sys.stderr,
+        )
+        try:
+            from lib import vault as _vault
+            _vault.unlock_interactive()
+            dry_result = _acroform.fill(
+                template_pdf=args.template,
+                profile=profile,
+                index=index,
+                output_pdf=output_pdf,
+                dry_run=True,
+            )
+        except Exception as _vault_exc:
+            print(f"[Vault] Unlock failed: {_vault_exc}", file=sys.stderr)
+
     # Optional LLM QA pass — flags section-context errors before commit
     qa_corrections: dict[str, str | None] = {}
     if args.qa:

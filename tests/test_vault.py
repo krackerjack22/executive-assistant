@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from unittest.mock import MagicMock, patch
 
@@ -225,3 +226,67 @@ def test_get_returns_none_for_empty_field(monkeypatch):
 
     with patch("subprocess.run", return_value=mock_result):
         assert vault.get("item", "notes") is None
+
+
+# ---------------------------------------------------------------------------
+# unlock_interactive
+# ---------------------------------------------------------------------------
+
+def test_unlock_interactive_sets_env_and_saves_file(monkeypatch, tmp_path):
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/local/bin/bw" if name == "bw" else None)
+    monkeypatch.delenv("BW_SESSION", raising=False)
+    vault.clear_cache()
+
+    session_file = tmp_path / ".bw_session"
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = "fake-session-token-xyz"
+
+    with patch("subprocess.run", return_value=mock_result):
+        token = vault.unlock_interactive(session_file=str(session_file))
+
+    assert token == "fake-session-token-xyz"
+    assert os.environ.get("BW_SESSION") == "fake-session-token-xyz"
+    assert session_file.read_text() == "fake-session-token-xyz"
+
+
+def test_unlock_interactive_raises_when_bw_missing(monkeypatch, tmp_path):
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    with pytest.raises(vault.VaultBinaryMissing):
+        vault.unlock_interactive(session_file=str(tmp_path / ".bw_session"))
+
+
+def test_unlock_interactive_raises_on_empty_token(monkeypatch, tmp_path):
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/local/bin/bw" if name == "bw" else None)
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = ""  # empty token = unlock failed
+
+    with patch("subprocess.run", return_value=mock_result):
+        with pytest.raises(vault.VaultError, match="bw unlock failed"):
+            vault.unlock_interactive(session_file=str(tmp_path / ".bw_session"))
+
+
+def test_unlock_interactive_raises_on_nonzero_returncode(monkeypatch, tmp_path):
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/local/bin/bw" if name == "bw" else None)
+    mock_result = MagicMock()
+    mock_result.returncode = 1
+    mock_result.stdout = ""
+
+    with patch("subprocess.run", return_value=mock_result):
+        with pytest.raises(vault.VaultError):
+            vault.unlock_interactive(session_file=str(tmp_path / ".bw_session"))
+
+
+def test_unlock_interactive_clears_cache(monkeypatch, tmp_path):
+    monkeypatch.setattr("shutil.which", lambda name: "/usr/local/bin/bw" if name == "bw" else None)
+    vault._bw_cache["some-item"] = {"notes": "cached"}
+
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = "new-token"
+
+    with patch("subprocess.run", return_value=mock_result):
+        vault.unlock_interactive(session_file=str(tmp_path / ".bw_session"))
+
+    assert "some-item" not in vault._bw_cache
