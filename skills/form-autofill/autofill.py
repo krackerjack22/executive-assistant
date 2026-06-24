@@ -413,6 +413,48 @@ def _run_manual_mode(
         print(_render_human(result))
     sys.exit(0)
 
+def _set_path(profile: dict, dot_path: str, value: str) -> bool:
+    """Robustly set a value in a nested dict/list using a dot path."""
+    parts = dot_path.split(".")
+    cur = profile
+    for i, part in enumerate(parts[:-1]):
+        if isinstance(cur, list):
+            try:
+                idx = int(part)
+                if idx >= len(cur) and idx < 10:
+                    cur.extend([{}] * (idx - len(cur) + 1))
+                if idx >= len(cur):
+                    return False
+                cur = cur[idx]
+            except ValueError:
+                return False
+        elif isinstance(cur, dict):
+            if part not in cur:
+                if parts[i+1].isdigit():
+                    cur[part] = []
+                else:
+                    cur[part] = {}
+            cur = cur[part]
+        else:
+            return False
+
+    last_part = parts[-1]
+    if isinstance(cur, list):
+        try:
+            idx = int(last_part)
+            if idx >= len(cur) and idx < 10:
+                cur.extend([None] * (idx - len(cur) + 1))
+            if idx < len(cur):
+                cur[idx] = value
+                return True
+            return False
+        except ValueError:
+            return False
+    elif isinstance(cur, dict):
+        cur[last_part] = value
+        return True
+    return False
+
 
 def _run_interview_mode(
     dry_result: dict,
@@ -490,13 +532,32 @@ def _run_interview_mode(
             print(_render_human(result))
         sys.exit(0)
 
+    # Identify mapped vs unmapped fields
+    unmapped = []
+    fname_to_source = {}
+    for f in none_fields:
+        fname = f["name"]
+        if fname in user_answers:
+            if f.get("source"):
+                fname_to_source[fname] = f["source"]
+            else:
+                unmapped.append({"name": fname, "value": user_answers[fname]})
+
+    if unmapped:
+        import schema_builder
+        new_mappings = schema_builder.generate_schema_mapping(unmapped, profile)
+        for fname, dot_path in new_mappings.items():
+            fname_to_source[fname] = dot_path
+
     # Confirmation summary
-    print("\n=== Confirm the following values ===")
+    print("\n=== Profile Update Summary ===")
     for fname, val in user_answers.items():
-        print(f'  "{fname}" → {val!r}')
-    print("\nApply? [Y]es / [N]o (abort): ", end="", flush=True)
+        dot_path = fname_to_source.get(fname, "<no path - note only>")
+        print(f"  {dot_path} → {val!r} (from '{fname}')")
+
+    print("\nApprove saving these changes to your profile? [Y]es / [N]o (abort): ", end="", flush=True)
     choice = input().strip().upper()
-    if choice not in ("Y", ""):
+    if choice not in ("Y", "YES", ""):
         print("Aborted. No files written, no profile updated.")
         sys.exit(0)
 
@@ -525,6 +586,11 @@ def _run_interview_mode(
     for fname, val in user_answers.items():
         with profile_file.open() as pf:
             current = _json_mod.load(pf)
+        
+        dot_path = fname_to_source.get(fname)
+        if dot_path:
+            _set_path(current, dot_path, val)
+
         source_note = {
             "field": fname,
             "source_form": template_pdf.stem,
@@ -532,6 +598,9 @@ def _run_interview_mode(
             "value_provided": val,
             "applied_by": "user via interview",
         }
+        if dot_path:
+            source_note["mapped_to_path"] = dot_path
+
         _pw.write_profile(profile_id, current, source_note)
         print(f"  Profile updated: {fname!r} noted.")
 
