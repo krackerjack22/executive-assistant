@@ -176,3 +176,62 @@ def test_overlay_fill_text_appears_in_output(tyler_profile, index, tmp_path):
     with pdfplumber.open(str(output)) as pdf:
         text = pdf.pages[0].extract_text() or ""
     assert "Tyler Combs" in text, f"Expected 'Tyler Combs' in filled PDF text. Got: {text[:300]}"
+
+
+# ---------------------------------------------------------------------------
+# OCR / Blank PDF Detection
+# ---------------------------------------------------------------------------
+
+def test_overlay_detects_blank_pdf(tyler_profile, index, tmp_path, monkeypatch):
+    """A completely blank PDF (no words, no images) raises a ValueError."""
+    import pdfplumber
+    class MockPage:
+        images = []
+        def extract_words(self):
+            return []
+    class MockPdf:
+        pages = [MockPage()]
+    
+    class MockOpen:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return MockPdf()
+        def __exit__(self, *args): pass
+
+    monkeypatch.setattr(pdfplumber, "open", MockOpen)
+    
+    with pytest.raises(ValueError, match="It is completely blank"):
+        overlay.fill(
+            template_pdf=FLATTENED_PDF,
+            profile=tyler_profile,
+            index=index,
+            output_pdf=tmp_path / "out.pdf",
+            dry_run=True,
+        )
+
+
+def test_overlay_detects_image_only_pdf(tyler_profile, index, tmp_path, monkeypatch):
+    """An image-only PDF attempts to run OCR workflow and raises if not interactive."""
+    import pdfplumber
+    class MockPage:
+        images = [{"dummy": "image"}]
+        def extract_words(self):
+            return []
+    class MockPdf:
+        pages = [MockPage()]
+
+    class MockOpen:
+        def __init__(self, *args, **kwargs): pass
+        def __enter__(self): return MockPdf()
+        def __exit__(self, *args): pass
+
+    monkeypatch.setattr(pdfplumber, "open", MockOpen)
+    
+    # In tests, sys.stdin.isatty() is usually False, so it hits the ValueError
+    with pytest.raises(ValueError, match="interactive terminal to perform automated OCR"):
+        overlay.fill(
+            template_pdf=FLATTENED_PDF,
+            profile=tyler_profile,
+            index=index,
+            output_pdf=tmp_path / "out.pdf",
+            dry_run=True,
+        )

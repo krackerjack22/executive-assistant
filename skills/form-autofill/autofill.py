@@ -21,6 +21,18 @@ from lib import profile_loader as _pl
 from lib import profile_writer as _pw
 import acroform as _acroform
 
+import overlay as _overlay
+import pypdf
+
+def _fill_pdf(template_pdf, **kwargs):
+    reader = pypdf.PdfReader(str(template_pdf))
+    root = reader.trailer.get("/Root", {})
+    if "/AcroForm" in root:
+        return _acroform.fill(template_pdf=template_pdf, **kwargs)
+    return _overlay.fill(template_pdf=template_pdf, **kwargs)
+
+
+
 _CONFIDENCE_LABEL = {
     "high": "CONFIDENT",
     "medium": "CHECK",
@@ -81,7 +93,7 @@ def _run_resolve(
     """Interactive resolution of low-confidence fields, then commit."""
     if dry_result["low_count"] == 0:
         print("No low-confidence fields — committing directly.")
-        result = _acroform.fill(
+        result = _fill_pdf(
             template_pdf=template_pdf,
             profile=profile,
             index=index,
@@ -170,7 +182,7 @@ def _run_resolve(
         if field["name"] in overrides:
             field["mapped_value"] = overrides[field["name"]]
 
-    result = _acroform.fill(
+    result = _fill_pdf(
         template_pdf=template_pdf,
         profile=profile,
         index=index,
@@ -350,7 +362,7 @@ def _run_skip_mode(
         for f in low_none:
             print(f"  - {f['name']} (confidence: {f.get('confidence', 'none')})")
 
-    result = _acroform.fill(
+    result = _fill_pdf(
         template_pdf=template_pdf,
         profile=profile,
         index=index,
@@ -366,52 +378,7 @@ def _run_skip_mode(
     sys.exit(0)
 
 
-def _run_manual_mode(
-    dry_result: dict,
-    template_pdf: Path,
-    profile: dict,
-    index: dict,
-    output_pdf: Path,
-    use_json: bool,
-    qa_corrections: dict | None = None,
-) -> None:
-    """Fill high/medium fields only; write a sidecar .missing.md checklist."""
-    result = _acroform.fill(
-        template_pdf=template_pdf,
-        profile=profile,
-        index=index,
-        output_pdf=output_pdf,
-        dry_run=False,
-        skip_confidences=_SKIP_CONFIDENCES,
-        field_overrides=qa_corrections or {},
-    )
 
-    missing = [
-        f for f in dry_result["fields"]
-        if f.get("confidence") in ("low", "none")
-    ]
-
-    form_name = template_pdf.stem
-    sidecar_path = output_pdf.with_name(output_pdf.stem + ".missing.md")
-    lines = [
-        f"# Manual fields for {form_name}",
-        "The following fields could not be auto-filled:",
-        "",
-    ]
-    for f in missing:
-        conf = f.get("confidence", "none")
-        nearest = f.get("source") or "none found"
-        lines.append(f'- [ ] Field "{f["name"]}" (confidence: {conf})')
-        lines.append(f"    Nearest profile field: {nearest}")
-    sidecar_path.write_text("\n".join(lines) + "\n")
-
-    print(f"Output PDF: {output_pdf}")
-    print(f"Missing fields checklist: {sidecar_path}")
-    if use_json:
-        print(json.dumps(result, indent=2))
-    else:
-        print(_render_human(result))
-    sys.exit(0)
 
 def _set_path(profile: dict, dot_path: str, value: str) -> bool:
     """Robustly set a value in a nested dict/list using a dot path."""
@@ -482,7 +449,7 @@ def _run_interview_mode(
 
     if not none_fields:
         print("No missing fields — proceeding with full fill.")
-        result = _acroform.fill(
+        result = _fill_pdf(
             template_pdf=template_pdf,
             profile=profile,
             index=index,
@@ -517,7 +484,7 @@ def _run_interview_mode(
 
     if not user_answers:
         print("No values provided — filling with confident fields only.")
-        result = _acroform.fill(
+        result = _fill_pdf(
             template_pdf=template_pdf,
             profile=profile,
             index=index,
@@ -562,7 +529,7 @@ def _run_interview_mode(
         sys.exit(0)
 
     # Fill PDF with confident fields + user-provided values
-    result = _acroform.fill(
+    result = _fill_pdf(
         template_pdf=template_pdf,
         profile=profile,
         index=index,
@@ -739,12 +706,11 @@ def main() -> None:
     )
     parser.add_argument(
         "--missing-mode",
-        choices=["skip", "manual", "interview"],
+        choices=["skip", "interview"],
         dest="missing_mode",
         help=(
             "How to handle low/none-confidence fields: "
             "skip=omit and print summary; "
-            "manual=write sidecar checklist; "
             "interview=prompt user interactively."
         ),
     )
@@ -807,7 +773,7 @@ def main() -> None:
     use_json = args.json_output or (not args.human and not sys.stdout.isatty())
 
     # First always do a dry-run to gather the mapping result
-    dry_result = _acroform.fill(
+    dry_result = _fill_pdf(
         template_pdf=args.template,
         profile=profile,
         index=index,
@@ -829,7 +795,7 @@ def main() -> None:
         try:
             from lib import vault as _vault
             _vault.unlock_interactive()
-            dry_result = _acroform.fill(
+            dry_result = _fill_pdf(
                 template_pdf=args.template,
                 profile=profile,
                 index=index,
@@ -856,12 +822,7 @@ def main() -> None:
         )
         return  # always calls sys.exit()
 
-    if args.missing_mode == "manual":
-        _run_manual_mode(
-            dry_result, args.template, profile, index, output_pdf, use_json,
-            qa_corrections=qa_corrections,
-        )
-        return  # always calls sys.exit()
+
 
     if args.missing_mode == "interview":
         _run_interview_mode(
@@ -896,7 +857,7 @@ def main() -> None:
         sys.exit(1)
 
     if want_commit:
-        result = _acroform.fill(
+        result = _fill_pdf(
             template_pdf=args.template,
             profile=profile,
             index=index,

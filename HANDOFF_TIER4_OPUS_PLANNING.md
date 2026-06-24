@@ -135,41 +135,24 @@ spatial map so the rest of the pipeline is unchanged.
    pages, but also for pages with unusual font encoding. What additional
    checks reduce false positives?
 
-2. Two candidate OCR approaches:
-   - **Tesseract** (local, `pytesseract` wrapper, requires `tesseract`
-     binary via Homebrew, free)
-   - **API-based** (e.g., a vision model call, requires network + cost)
-   Which fits this project's constraints (personal use, offline-capable,
-   no recurring cost)? Design for that one; note the other as an option.
+2. Evaluate 3 candidate OCR approaches (in order of implementation priority):
+   - **Native Agent Vision Capabilities** (e.g. Claude Code's built-in vision capabilities) evaluate token efficiency of this
+   - **User/manual OCR** (local, no recurring cost)
+   - **API-based** (e.g., a vision model call (to gemini flash 1.5), requires network + cost)
+   Which fits this project's constraints (personal use, 
+   low recurring cost)? 
 
-3. The existing spatial map format (produced by `pdf_inspect.py`) is a list
-   of word-level dicts. Tesseract's `image_to_data()` output uses a
-   different coordinate system (pixel space, top-left origin) vs.
-   pdfplumber (points, bottom-left origin for PDF). How should coordinates
-   be normalised so downstream code is unaware of the source?
 
-4. OCR adds latency. Should it run automatically when pdfplumber returns
-   empty results, or require an explicit `--ocr` flag? What are the
-   tradeoffs?
-
-5. Rasterization: `pdf2image` (requires `poppler`) converts PDF pages to
-   PIL images. Is poppler already available? If not, is it a reasonable
-   dependency for this project? What is the fallback if it's not installed?
-
-6. Where does OCR fit in the preflight check? Should `tesseract` and
-   `poppler`/`pdftoppm` be added to optional tool checks in `preflight.py`?
-   What is the preflight issue code and actionable message if they're missing
-   and OCR is attempted?
+6. Where does OCR fit in the preflight check? 
 
 7. `overlay.py` is the consumer of spatial maps for fill purposes.
-   Does the OCR spatial map need to include confidence scores per word
-   (Tesseract provides these), and if so, should low-confidence OCR words
-   be excluded or flagged?
+   Does the OCR spatial map need to include confidence scores per word, and if so, should low-confidence OCR words
+   be excluded or flagged?  (seems excessive for personal use case, but worth considering)
 
 ---
 
 ## Issue #12 — Bitwarden CLI integration for vault-backed fields
-
+Check if this is already resolved in the main branch... then bypass all these questions if resovled.
 **Brief:** Profile JSONs have a `vault_references` block with null values
 for sensitive fields (SSN, DL number, passport, etc.). At fill-time, when
 a form field maps to a vault-backed path, the actual value should be

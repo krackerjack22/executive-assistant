@@ -67,7 +67,7 @@ Each field in the preview is labeled with a confidence tier:
 | CONFIDENT | high       | Exact synonym match, no alternatives                 | Safe to commit as-is        |
 | CHECK     | medium     | Substring match OR exact match with 1 alternative    | Glance at the "via:" line   |
 | ASK       | low        | Ambiguous — 2+ plausible candidates or weak match    | Resolve with user input      |
-| MISSING   | none       | No profile data matched this field                   | Fill manually               |
+| MISSING   | none       | No profile data matched this field                   | Will be skipped or handled in interview mode |
 
 Example dry-run output:
 ```
@@ -88,9 +88,12 @@ Example dry-run output:
 [DRY-RUN] Pass --commit to write the file.
 ```
 
-If `low > 0`, `--commit` will be refused. Options:
+If `low > 0` or missing fields exist, `--commit` will be refused unless a resolution mode is specified. Options:
 - Pass `--commit-unsafe` to write anyway (still shows low fields in output)
-- Pass `--resolve` to interactively fix low fields (v1.5, not yet implemented)
+- Pass `--resolve` to interactively fix low fields
+- Pass `--missing-mode skip` to omit low/none fields and continue
+- Pass `--missing-mode interview` to prompt the user interactively. 
+  **CRITICAL**: When gathering user input during interview mode, if you are running as Claude Code, you must use the tool call `AskUserQuestion` to interact with the user.
 
 ## CLI Reference
 
@@ -104,8 +107,11 @@ python skills/form-autofill/autofill.py --template /path/to/blank.pdf --profile 
 # Commit even with low-confidence fields
 python skills/form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --commit-unsafe
 
-# Interactive resolution (v1.5 stub — prints stub message and exits)
+# Interactive resolution of low-confidence fields
 python skills/form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --resolve
+
+# Handle missing data modes (skip or interview)
+python skills/form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --missing-mode interview
 
 # Check environment
 python skills/form-autofill/autofill.py --check-env [--human]
@@ -119,4 +125,5 @@ Run `python -c "import sys; sys.path.insert(0,'lib'); from lib import profile_lo
 
 - **Dry-run is the default.** `--commit` is required to write.
 - Inheritance is resolved automatically: Fiona's address → Tyler's address, Fiona's insurance → Tyler's policy.
-- `overlay.py` (spatial fill for flattened PDFs) is a v1.5 stub — not yet implemented.
+- `overlay.py` handles spatial fill for flattened PDFs containing text layers. 
+- **OCR Policy:** For scanned (image-only) PDFs, do NOT build or install custom OCR tools (like Tesseract). Fail gracefully and either prompt the user to manually OCR the PDF using their own software, or if you are a vision-capable agent, offer to use your native vision capabilities to read the form.

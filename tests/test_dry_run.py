@@ -397,34 +397,6 @@ def test_missing_mode_skip_still_fills_confident_fields(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# CLI: --missing-mode manual
-# ---------------------------------------------------------------------------
-
-def test_missing_mode_manual_writes_sidecar(tmp_path):
-    """--missing-mode manual writes a .missing.md sidecar alongside the output PDF."""
-    output = tmp_path / "manual_out.pdf"
-    sidecar = tmp_path / "manual_out.missing.md"
-    proc = subprocess.run(
-        [
-            sys.executable,
-            str(AUTOFILL_CLI),
-            "--template", str(SYNTHETIC_PDF),
-            "--profile", "tyler_combs",
-            "--output", str(output),
-            "--missing-mode", "manual",
-            "--json-output",
-        ],
-        cwd=str(PROJECT_ROOT),
-        capture_output=True,
-        text=True,
-    )
-    assert proc.returncode == 0, f"Expected exit 0. stderr: {proc.stderr}"
-    assert sidecar.exists(), f"Sidecar .missing.md was not created at {sidecar}"
-    content = sidecar.read_text()
-    assert "Manual fields for" in content
-
-
-# ---------------------------------------------------------------------------
 # Note: --missing-mode interview requires an interactive terminal.
 # It cannot be fully tested in pytest. Test manually by running:
 #   python3 skills/form-autofill/autofill.py --template <pdf> --missing-mode interview

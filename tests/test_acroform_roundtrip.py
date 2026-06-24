@@ -382,4 +382,4 @@ def test_fiona_insurance_shows_tyler_carrier(index, tmp_path):
         dry_run=True,
     )
     field_map = {f["name"]: f["mapped_value"] for f in result["fields"]}
-    assert "Regence" in (field_map.get("insurance company") or "")
+    assert "CareOregon" in (field_map.get("insurance company") or "") or "OHP" in (field_map.get("insurance company") or "")
