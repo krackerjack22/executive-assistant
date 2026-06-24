@@ -7,8 +7,8 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-# form-autofill skill dir (for acroform, field_mapper, overlay)
-_AUTOFILL_DIR = _ROOT / "skills" / "form-autofill"
+# pdf-form-autofill skill dir (for acroform, field_mapper, overlay)
+_AUTOFILL_DIR = _ROOT / "skills" / "pdf-form-autofill"
 if str(_AUTOFILL_DIR) not in sys.path:
     sys.path.insert(0, str(_AUTOFILL_DIR))
 

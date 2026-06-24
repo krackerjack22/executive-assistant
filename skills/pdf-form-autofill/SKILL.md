@@ -1,9 +1,9 @@
 ---
-name: form-autofill
-description: Fill out a PDF form using a family member's profile. Triggers on "fill out this PDF", "autofill this form for Fiona", "complete the intake form using Tyler's profile".
+name: pdf-form-autofill
+description: "Family-profile-driven form workflow; routes between pdf-form-extraction and pdf-form-autofill child skills based on user intent. Also orchestrates personal, household, and calendar tasks using its specialized child skills."
 ---
 
-# form-autofill
+# pdf-form-autofill
 
 Fill blank AcroForm PDFs from family profile data.
 

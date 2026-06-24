@@ -23,7 +23,7 @@ from lib import env as _env
 import pdf_inspect as _inspect
 
 # Add the autofill skill dir so field_mapper is importable
-_AUTOFILL_DIR = Path(__file__).resolve().parent.parent / "form-autofill"
+_AUTOFILL_DIR = Path(__file__).resolve().parent.parent / "pdf-form-autofill"
 if str(_AUTOFILL_DIR) not in sys.path:
     sys.path.insert(0, str(_AUTOFILL_DIR))
 

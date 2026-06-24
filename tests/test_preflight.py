@@ -122,7 +122,7 @@ def test_preflight_speed():
 def test_preflight_cli_ok(tmp_path):
     """--check-env exits 0 and prints ok=true JSON when env is valid."""
     result = subprocess.run(
-        [sys.executable, "skills/form-autofill/autofill.py", "--check-env"],
+        [sys.executable, "skills/pdf-form-autofill/autofill.py", "--check-env"],
         cwd=str(Path(__file__).resolve().parent.parent),
         capture_output=True,
         text=True,
@@ -140,7 +140,7 @@ def test_preflight_cli_missing_dir_exit_1(tmp_path):
     """--check-env exits 1 with PROFILES_DIR_MISSING when dir doesn't exist."""
     nonexistent = tmp_path / "no_profiles"
     result = subprocess.run(
-        [sys.executable, "skills/form-autofill/autofill.py", "--check-env"],
+        [sys.executable, "skills/pdf-form-autofill/autofill.py", "--check-env"],
         cwd=str(Path(__file__).resolve().parent.parent),
         env={**os.environ, "EXEC_ASSISTANT_PROFILES_DIR": str(nonexistent)},
         capture_output=True,
@@ -156,7 +156,7 @@ def test_preflight_cli_missing_dir_exit_1(tmp_path):
 def test_preflight_cli_missing_index_exit_1(tmp_path):
     """--check-env exits 1 with PROFILES_INDEX_MISSING when index is absent."""
     result = subprocess.run(
-        [sys.executable, "skills/form-autofill/autofill.py", "--check-env"],
+        [sys.executable, "skills/pdf-form-autofill/autofill.py", "--check-env"],
         cwd=str(Path(__file__).resolve().parent.parent),
         env={**os.environ, "EXEC_ASSISTANT_PROFILES_DIR": str(tmp_path)},
         capture_output=True,

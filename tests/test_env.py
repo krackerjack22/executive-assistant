@@ -56,7 +56,7 @@ def test_cli_exits_nonzero_on_missing_dir(tmp_path, capsys):
     import subprocess, sys
     nonexistent = tmp_path / "no_such_dir"
     result = subprocess.run(
-        [sys.executable, "skills/form-autofill/autofill.py", "--check-env"],
+        [sys.executable, "skills/pdf-form-autofill/autofill.py", "--check-env"],
         cwd=str(Path(__file__).resolve().parent.parent),
         env={**os.environ, "EXEC_ASSISTANT_PROFILES_DIR": str(nonexistent)},
         capture_output=True,

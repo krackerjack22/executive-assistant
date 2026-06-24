@@ -16,7 +16,7 @@ FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures"
 SYNTHETIC_PDF = FIXTURE_DIR / "synthetic_form.pdf"
 AMBIGUOUS_PDF = FIXTURE_DIR / "ambiguous_form.pdf"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-AUTOFILL_CLI = PROJECT_ROOT / "skills" / "form-autofill" / "autofill.py"
+AUTOFILL_CLI = PROJECT_ROOT / "skills" / "pdf-form-autofill" / "autofill.py"
 
 
 @pytest.fixture(scope="module")
