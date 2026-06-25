@@ -53,10 +53,31 @@ Never guess or fabricate a path. A wrong path produces a silent exit-2 failure.
 
 1. **Choose profile** — ask which family member (default: tyler_combs).
 2. **Run preflight** — `python skills/form-autofill/autofill.py --check-env`.
-3. **Dry-run preview** — `python skills/form-autofill/autofill.py --template <path> --profile <id>`.
+3. **Dry-run preview** — `python skills/form-autofill/autofill.py --template <path> --profile <id> --json-output`.
    - Show the field-by-field mapping table to the user.
    - Ask for confirmation before committing.
-4. **Commit** — `python skills/form-autofill/autofill.py --template <path> --profile <id> --commit [--output <path>]`.
+4. **Vault check** — before committing, inspect the dry-run output for vault-locked fields.
+
+   **In JSON mode:** look for `"vault_locked": true` at the top level of the result.
+   **In human mode:** look for `[VAULT LOCKED]` in the output, or `(locked)` in any field's `via:` line.
+
+   If vault-locked fields are present **and you are running as Claude Code** (non-tty):
+   - Do **NOT** proceed to commit — vault fields will be silently skipped.
+   - **Use `AskUserQuestion`** to prompt the user. Example:
+
+     > "**X vault-backed field(s)** (e.g. SSN/SSID) require Bitwarden to be unlocked before I can fill them. Please run `bw unlock` in your terminal and paste the session key here."
+
+   - Once the user provides the session key, re-run the dry-run with it:
+     ```bash
+     BW_SESSION="<session-key>" python skills/pdf-form-autofill/autofill.py \
+       --template <path> --profile <id> --json-output
+     ```
+   - Verify `"vault_locked"` is no longer in the result, then proceed to commit.
+
+   If vault-locked fields are present **in a tty** (interactive terminal):
+   - The script will prompt for the master password automatically — no action needed.
+
+5. **Commit** — `python skills/form-autofill/autofill.py --template <path> --profile <id> --commit [--output <path>]`.
 
 ## Dry-Run Output Format
 
@@ -99,22 +120,28 @@ If `low > 0` or missing fields exist, `--commit` will be refused unless a resolu
 
 ```bash
 # Dry-run (default — always safe)
-python skills/form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs
+python skills/pdf-form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs
+
+# Dry-run with JSON output (preferred when running as Claude Code)
+python skills/pdf-form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --json-output
+
+# Dry-run with vault unlocked (pass BW_SESSION from 'bw unlock' output)
+BW_SESSION="<token>" python skills/pdf-form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --json-output
 
 # Commit (writes file; refused if any field is low confidence)
-python skills/form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --commit
+BW_SESSION="<token>" python skills/pdf-form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --commit
 
 # Commit even with low-confidence fields
-python skills/form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --commit-unsafe
+python skills/pdf-form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --commit-unsafe
 
 # Interactive resolution of low-confidence fields
-python skills/form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --resolve
+python skills/pdf-form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --resolve
 
 # Handle missing data modes (skip or interview)
-python skills/form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --missing-mode interview
+python skills/pdf-form-autofill/autofill.py --template /path/to/blank.pdf --profile fiona_combs --missing-mode interview
 
 # Check environment
-python skills/form-autofill/autofill.py --check-env [--human]
+python skills/pdf-form-autofill/autofill.py --check-env [--human]
 ```
 
 ## Profiles available
@@ -127,5 +154,5 @@ Run `python -c "import sys; sys.path.insert(0,'lib'); from lib import profile_lo
 - Inheritance is resolved automatically: Fiona's address → Tyler's address, Fiona's insurance → Tyler's policy.
 - `overlay.py` handles spatial fill for flattened PDFs containing text layers.
 - **OCR Policy:** For scanned (image-only) PDFs, do NOT build or install custom OCR tools (like Tesseract). Fail gracefully and either prompt the user to manually OCR the PDF using their own software, or if you are a vision-capable agent, offer to use your native vision capabilities to read the form.
-- **SSID fields:** Fields labeled "SSID", "SSIDRow", or "State Student ID" are mapped to `vault_references.ssn` and require Bitwarden to be unlocked. The vault is unlocked inline if running in a tty; otherwise run `bw unlock` first and export `BW_SESSION`.
+- **SSID fields:** Fields labeled "SSID", "SSIDRow", or "State Student ID" are mapped to `vault_references.ssn` and require Bitwarden to be unlocked. In a tty the script unlocks inline; in Claude Code the vault check step (step 4 above) handles prompting the user via `AskUserQuestion`.
 - **Profile completeness:** If a profile has `status: skeleton_partial`, some fields may return MISSING confidence. Fill out missing profile values first, then re-run the autofill. Fields most commonly incomplete on child profiles: `identity.last_name`, `identity.date_of_birth`, and `addresses.home` (resolved via `same_as_profile` from the primary parent's profile).

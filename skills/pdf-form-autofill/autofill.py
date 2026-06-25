@@ -78,6 +78,12 @@ def _render_human(result: dict) -> str:
         lines.append(f"\nOutput written to: {result['output']}")
     else:
         lines.append("\n[DRY-RUN] Pass --commit to write the file.")
+    if result.get("vault_locked"):
+        lines.append(
+            f"\n[VAULT LOCKED] {result['vault_locked_count']} field(s) require Bitwarden: "
+            f"{result['vault_locked_fields']}\n"
+            "  → Run 'bw unlock' in your terminal, then re-run with BW_SESSION exported."
+        )
     return "\n".join(lines)
 
 
@@ -781,29 +787,49 @@ def main() -> None:
         dry_run=True,
     )
 
-    # Inline Bitwarden unlock — if vault-locked fields exist and we're in a tty,
-    # prompt for master password, re-run the dry run with the fresh session.
+    # Inline Bitwarden unlock — if vault-locked fields exist, handle based on context.
     vault_locked = [
         f for f in dry_result["fields"]
         if "(locked)" in (f.get("source") or "")
     ]
-    if vault_locked and sys.stdin.isatty():
-        print(
-            f"\n[Vault] {len(vault_locked)} field(s) require Bitwarden unlock.",
-            file=sys.stderr,
-        )
-        try:
-            from lib import vault as _vault
-            _vault.unlock_interactive()
-            dry_result = _fill_pdf(
-                template_pdf=args.template,
-                profile=profile,
-                index=index,
-                output_pdf=output_pdf,
-                dry_run=True,
+    if vault_locked:
+        if sys.stdin.isatty():
+            # Interactive terminal: prompt for master password inline.
+            print(
+                f"\n[Vault] {len(vault_locked)} field(s) require Bitwarden unlock.",
+                file=sys.stderr,
             )
-        except Exception as _vault_exc:
-            print(f"[Vault] Unlock failed: {_vault_exc}", file=sys.stderr)
+            try:
+                from lib import vault as _vault
+                _vault.unlock_interactive()
+                dry_result = _fill_pdf(
+                    template_pdf=args.template,
+                    profile=profile,
+                    index=index,
+                    output_pdf=output_pdf,
+                    dry_run=True,
+                )
+            except Exception as _vault_exc:
+                print(f"[Vault] Unlock failed: {_vault_exc}", file=sys.stderr)
+        else:
+            # Non-interactive (Claude Code / piped output): surface vault status in
+            # the result so the agent can detect it, prompt the user, and re-run.
+            locked_names = [f["name"] for f in vault_locked]
+            dry_result["vault_locked"] = True
+            dry_result["vault_locked_count"] = len(vault_locked)
+            dry_result["vault_locked_fields"] = locked_names
+            dry_result["vault_locked_message"] = (
+                f"{len(vault_locked)} vault-backed field(s) skipped "
+                f"({', '.join(locked_names)}). "
+                "Run 'bw unlock', set BW_SESSION, and re-run to include them."
+            )
+            print(
+                f"\n[Vault] {len(vault_locked)} field(s) require Bitwarden. "
+                "BW_SESSION not set — vault-backed fields will be skipped.\n"
+                "  Re-run with BW_SESSION exported to fill these fields: "
+                f"{locked_names}",
+                file=sys.stderr,
+            )
 
     # Optional LLM QA pass — flags section-context errors before commit
     qa_corrections: dict[str, str | None] = {}
