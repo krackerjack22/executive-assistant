@@ -125,5 +125,7 @@ Run `python -c "import sys; sys.path.insert(0,'lib'); from lib import profile_lo
 
 - **Dry-run is the default.** `--commit` is required to write.
 - Inheritance is resolved automatically: Fiona's address → Tyler's address, Fiona's insurance → Tyler's policy.
-- `overlay.py` handles spatial fill for flattened PDFs containing text layers. 
+- `overlay.py` handles spatial fill for flattened PDFs containing text layers.
 - **OCR Policy:** For scanned (image-only) PDFs, do NOT build or install custom OCR tools (like Tesseract). Fail gracefully and either prompt the user to manually OCR the PDF using their own software, or if you are a vision-capable agent, offer to use your native vision capabilities to read the form.
+- **SSID fields:** Fields labeled "SSID", "SSIDRow", or "State Student ID" are mapped to `vault_references.ssn` and require Bitwarden to be unlocked. The vault is unlocked inline if running in a tty; otherwise run `bw unlock` first and export `BW_SESSION`.
+- **Profile completeness:** If a profile has `status: skeleton_partial`, some fields may return MISSING confidence. Fill out missing profile values first, then re-run the autofill. Fields most commonly incomplete on child profiles: `identity.last_name`, `identity.date_of_birth`, and `addresses.home` (resolved via `same_as_profile` from the primary parent's profile).

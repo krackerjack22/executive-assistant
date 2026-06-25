@@ -42,6 +42,10 @@
     "ssn":                    "vault_references.ssn",
     "social security":        "vault_references.ssn",
     "social security number": "vault_references.ssn",
+    "ssid":                   "vault_references.ssn",
+    "ssidrow":                "vault_references.ssn",
+    "state student id":       "vault_references.ssn",
+    "student id number":      "vault_references.ssn",
 
     "drivers license":        "identity.drivers_license_number",
     "driver license":         "identity.drivers_license_number",
