@@ -53,9 +53,30 @@ Never guess or fabricate a path. A wrong path produces a silent exit-2 failure.
 
 1. **Choose profile** — ask which family member (default: tyler_combs).
 2. **Run preflight** — `python skills/form-autofill/autofill.py --check-env`.
-3. **Dry-run preview** — `python skills/form-autofill/autofill.py --template <path> --profile <id> --json-output`.
+3. **Dry-run preview** — `python skills/pdf-form-autofill/autofill.py --template <path> --profile <id> --json-output`.
    - Show the field-by-field mapping table to the user.
    - Ask for confirmation before committing.
+
+3b. **Profile-null check** — after dry-run, inspect the result for `profile_null_count > 0`.
+
+   These are fields labeled **NO_DATA** in the output: the skill knows exactly what profile path the field maps to (`profile_null_path`) but the profile has no value stored there yet. This is different from MISSING (no synonym match at all).
+
+   **When `profile_null_count > 0` and running as Claude Code:**
+   - Do **NOT** silently skip these fields.
+   - **Use `AskUserQuestion`** listing each NO_DATA field by its `name` and `profile_null_path`. Example prompt:
+
+     > "The following fields have a matching profile path but no stored value. Please provide the values so I can fill them in and save them to the profile for future use:
+     > - **Legal Middle Name** → `identity.middle_name`
+     > - *(etc.)*"
+
+   - For each value the user provides:
+     1. Update the profile JSON directly (edit the file at the path returned by `lib/env.profiles_dir()`).
+     2. Re-run the dry-run to confirm the field now maps.
+   - Then proceed to the vault check and commit.
+
+   **When `profile_null_count > 0` and running in a tty:**
+   - Pass `--missing-mode interview` to the commit command — the script will prompt interactively and write back to the profile automatically.
+
 4. **Vault check** — before committing, inspect the dry-run output for vault-locked fields.
 
    **In JSON mode:** look for `"vault_locked": true` at the top level of the result.
@@ -88,7 +109,8 @@ Each field in the preview is labeled with a confidence tier:
 | CONFIDENT | high       | Exact synonym match, no alternatives                 | Safe to commit as-is        |
 | CHECK     | medium     | Substring match OR exact match with 1 alternative    | Glance at the "via:" line   |
 | ASK       | low        | Ambiguous — 2+ plausible candidates or weak match    | Resolve with user input      |
-| MISSING   | none       | No profile data matched this field                   | Will be skipped or handled in interview mode |
+| NO_DATA   | none       | Synonym matched but profile has no value for that path | **Ask the user** — add to profile then re-run |
+| MISSING   | none       | No synonym matched this field at all                 | Skip, or handle via interview mode |
 
 Example dry-run output:
 ```

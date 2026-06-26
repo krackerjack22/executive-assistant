@@ -181,6 +181,8 @@ def fill(
             "alternatives": fm_result["alternatives"],
             "notes": fm_result["notes"],
             "skipped": skipped,
+            "profile_null": fm_result.get("profile_null", False),
+            "profile_null_path": fm_result.get("profile_null_path"),
         })
         if value is not None:
             if f.get("field_type") == "/Btn":
@@ -199,6 +201,10 @@ def fill(
     filled_count = sum(1 for r in field_results if not r["skipped"])
     skipped_count = sum(1 for r in field_results if r["skipped"])
     low_count = sum(1 for r in field_results if r.get("confidence") == "low")
+    profile_null_fields = [
+        {"name": r["name"], "profile_null_path": r["profile_null_path"]}
+        for r in field_results if r.get("profile_null")
+    ]
 
     if dry_run:
         return {
@@ -207,6 +213,8 @@ def fill(
             "filled_count": filled_count,
             "skipped_count": skipped_count,
             "low_count": low_count,
+            "profile_null_count": len(profile_null_fields),
+            "profile_null_fields": profile_null_fields,
         }
 
     # Write filled PDF — clone_from preserves the /AcroForm root dictionary
@@ -239,5 +247,7 @@ def fill(
         "filled_count": filled_count,
         "skipped_count": skipped_count,
         "low_count": low_count,
+        "profile_null_count": len(profile_null_fields),
+        "profile_null_fields": profile_null_fields,
         "output": str(output_pdf),
     }

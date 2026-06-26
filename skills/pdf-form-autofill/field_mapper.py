@@ -200,8 +200,9 @@ def _make_result(
     source: str,
     alternatives: list | None = None,
     notes: list | None = None,
+    **extra,
 ) -> dict:
-    return {
+    result = {
         "pdf_field_name": pdf_field_name,
         "pdf_field_alt": pdf_field_alt,
         "value": value,
@@ -210,6 +211,8 @@ def _make_result(
         "alternatives": alternatives or [],
         "notes": notes or [],
     }
+    result.update(extra)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -624,6 +627,9 @@ def map_pdf_field(
     best_by_path: dict[str, dict] = {}
     profile_id = resolved_profile.get("profile_id")
     vault_failed: list[dict] = []
+    # Tracks synonyms that matched but whose profile value is null.
+    # Key: dot_path, value: best-scoring candidate for that path.
+    profile_null: dict[str, dict] = {}
 
     for raw_label in (pdf_field_name, pdf_field_alt):
         if not raw_label:
@@ -689,6 +695,16 @@ def map_pdf_field(
             else:
                 value = _resolve_and_format(resolved_profile, dot_path, today)
                 if value is None:
+                    # Synonym matched but profile has no value — track it so the
+                    # caller can surface it as a targeted "please add this" prompt.
+                    if _is_permitted_by_context(dot_path, profile_id, norm_name, norm_alt):
+                        existing_null = profile_null.get(dot_path)
+                        if existing_null is None or score > existing_null["score"]:
+                            profile_null[dot_path] = {
+                                "token": token,
+                                "dot_path": dot_path,
+                                "score": round(score, 4),
+                            }
                     continue
 
             # Skip candidates blocked by context rules.
@@ -759,6 +775,21 @@ def map_pdf_field(
                             del best_by_path[path]
 
     if not best_by_path:
+        # Profile-null: synonym matched but the profile has no value for that path.
+        # Return a distinct result so callers can prompt the user for the missing data
+        # rather than silently skipping or treating it as an unknown field.
+        if profile_null:
+            best_null = max(profile_null.values(), key=lambda c: c["score"])
+            return _make_result(
+                pdf_field_name, pdf_field_alt, None, "none",
+                f"profile null: {best_null['token']} → {best_null['dot_path']}",
+                notes=[
+                    f"Field maps to '{best_null['dot_path']}' but profile has no value — "
+                    "add it to the profile or supply it during interview."
+                ],
+                profile_null=True,
+                profile_null_path=best_null["dot_path"],
+            )
         return _make_result(
             pdf_field_name, pdf_field_alt, None, "none",
             f"no match for field '{pdf_field_name}' / alt '{pdf_field_alt}'",

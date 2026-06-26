@@ -39,6 +39,8 @@ _CONFIDENCE_LABEL = {
     "low": "ASK",
     "none": "MISSING",
 }
+# profile_null fields get their own label to distinguish from true no-match misses.
+_PROFILE_NULL_LABEL = "NO_DATA"
 
 
 def _run_preflight(output_dir: Path, human: bool) -> None:
@@ -54,15 +56,25 @@ def _render_human(result: dict) -> str:
     """Format a fill result as a human-readable table."""
     lines = []
     mode = result["mode"]
+    pn_count = result.get("profile_null_count", 0)
     lines.append(
         f"\n=== Autofill {mode.upper()}  "
         f"filled={result['filled_count']}  "
         f"skipped={result['skipped_count']}  "
-        f"low={result['low_count']} ==="
+        f"low={result['low_count']}  "
+        f"no_data={pn_count} ==="
     )
+    if pn_count:
+        lines.append(
+            f"  *** {pn_count} NO_DATA field(s): profile has a matching path but no value. "
+            "Add to the profile or provide via interview. ***"
+        )
     lines.append("")
     for f in result["fields"]:
-        label = _CONFIDENCE_LABEL.get(f.get("confidence", "none"), "?")
+        if f.get("profile_null"):
+            label = _PROFILE_NULL_LABEL
+        else:
+            label = _CONFIDENCE_LABEL.get(f.get("confidence", "none"), "?")
         val_display = f"= {f['mapped_value']!r}" if f["mapped_value"] else "= (none)"
         lines.append(f"  {label:9s}  [{f['name']}]  {val_display}")
         if f.get("source"):
