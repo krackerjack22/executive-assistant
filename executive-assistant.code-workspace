@@ -1,13 +1,13 @@
 {
 	"folders": [
 		{
-			"path": "../../Library/CloudStorage/GoogleDrive-tylercombs@gmail.com/Shared drives/Combslink/AI Training Documents/AddToCalendar"
+			"path": "../../../Library/CloudStorage/GoogleDrive-tylercombs@gmail.com/Shared drives/Combslink/AI Training Documents/AddToCalendar"
 		},
 		{
 			"path": "."
 		},
 		{
-			"path": "../../Documents/Claude/Projects"
+			"path": "../../../Documents/Claude/Projects"
 		}
 	],
 	"settings": {}

@@ -1,6 +1,6 @@
 ---
 name: executive-assistant
-description: "Family-profile-driven form workflow; routes between pdf-form-extraction and form-autofill child skills based on user intent. Also orchestrates personal, household, and calendar tasks using its specialized child skills."
+description: "v0.19: Family-profile-driven form workflow; routes between pdf-form-extraction and form-autofill child skills based on user intent. Also orchestrates personal, household, and calendar tasks using its specialized child skills."
 ---
 
 # Executive Assistant
