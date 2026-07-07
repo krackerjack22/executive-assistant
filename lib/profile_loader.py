@@ -139,5 +139,6 @@ def load_profile(profile_id: str) -> dict:
 
     # Attach the index for resolvers that need it
     profile["_index"] = index
+    profile["profile_id"] = profile_id
 
     return profile

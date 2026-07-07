@@ -107,6 +107,7 @@ def _run_resolve(
     output_pdf: Path,
     use_json: bool,
     qa_corrections: dict | None = None,
+    run_vision_qa: bool = False,
 ) -> None:
     """Interactive resolution of low-confidence fields, then commit."""
     if dry_result["low_count"] == 0:
@@ -119,6 +120,9 @@ def _run_resolve(
             dry_run=False,
             field_overrides=qa_corrections or {},
         )
+        if run_vision_qa:
+            result = _run_vision_qa_pass(result, template_pdf, profile, index, output_pdf, qa_corrections or {})
+
         if use_json:
             print(json.dumps(result, indent=2))
         else:
@@ -208,6 +212,9 @@ def _run_resolve(
         dry_run=False,
         field_overrides={**overrides, **(qa_corrections or {})},
     )
+    if run_vision_qa:
+        result = _run_vision_qa_pass(result, template_pdf, profile, index, output_pdf, {**overrides, **(qa_corrections or {})})
+
     if use_json:
         print(json.dumps(result, indent=2))
     else:
@@ -369,6 +376,7 @@ def _run_skip_mode(
     output_pdf: Path,
     use_json: bool,
     qa_corrections: dict | None = None,
+    run_vision_qa: bool = False,
 ) -> None:
     """Fill only high/medium confidence fields; skip low/none and print summary."""
     low_none = [
@@ -389,6 +397,9 @@ def _run_skip_mode(
         skip_confidences=_SKIP_CONFIDENCES,
         field_overrides=qa_corrections or {},
     )
+    if run_vision_qa:
+        result = _run_vision_qa_pass(result, template_pdf, profile, index, output_pdf, qa_corrections or {})
+
     if use_json:
         print(json.dumps(result, indent=2))
     else:
@@ -450,6 +461,7 @@ def _run_interview_mode(
     output_pdf: Path,
     use_json: bool,
     qa_corrections: dict | None = None,
+    run_vision_qa: bool = False,
 ) -> None:
     """Interactively collect values for none-confidence fields, then fill and write back."""
     if not sys.stdin.isatty():
@@ -475,6 +487,9 @@ def _run_interview_mode(
             dry_run=False,
             field_overrides=qa_corrections or {},
         )
+        if run_vision_qa:
+            result = _run_vision_qa_pass(result, template_pdf, profile, index, output_pdf, qa_corrections or {})
+
         if use_json:
             print(json.dumps(result, indent=2))
         else:
@@ -511,6 +526,9 @@ def _run_interview_mode(
             skip_confidences=_SKIP_CONFIDENCES,
             field_overrides=qa_corrections or {},
         )
+        if run_vision_qa:
+            result = _run_vision_qa_pass(result, template_pdf, profile, index, output_pdf, qa_corrections or {})
+
         if use_json:
             print(json.dumps(result, indent=2))
         else:
@@ -588,6 +606,9 @@ def _run_interview_mode(
 
         _pw.write_profile(profile_id, current, source_note)
         print(f"  Profile updated: {fname!r} noted.")
+
+    if run_vision_qa:
+        result = _run_vision_qa_pass(result, template_pdf, profile, index, output_pdf, {**user_answers, **(qa_corrections or {})})
 
     if use_json:
         print(json.dumps(result, indent=2))
@@ -675,6 +696,43 @@ def _run_qa_pass(
     return corrections
 
 
+def _run_vision_qa_pass(
+    initial_result: dict,
+    template_pdf: Path,
+    profile: dict,
+    index: dict,
+    output_pdf: Path,
+    existing_overrides: dict,
+) -> dict:
+    import vision_qa
+    print("\n[Vision QA] Running LLM signature overlap review — this may take a minute...")
+    try:
+        corrections = vision_qa.review_signatures(
+            initial_result["fields"], output_pdf
+        )
+    except RuntimeError as exc:
+        print(f"[Vision QA] Skipped: {exc}", file=sys.stderr)
+        return initial_result
+
+    if not corrections:
+        print("[Vision QA] No overlapping signatures detected.")
+        return initial_result
+
+    print(f"\n[Vision QA] Detected {len(corrections)} overlapping signature(s). Re-rendering PDF...")
+    new_overrides = {**existing_overrides, **corrections}
+    
+    result = _fill_pdf(
+        template_pdf=template_pdf,
+        profile=profile,
+        index=index,
+        output_pdf=output_pdf,
+        dry_run=False,
+        skip_confidences=_SKIP_CONFIDENCES if initial_result["skipped_count"] > 0 else frozenset(),
+        field_overrides=new_overrides,
+    )
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Autofill an AcroForm PDF from a family profile."
@@ -747,6 +805,11 @@ def main() -> None:
         dest="qa_model",
         metavar="MODEL",
         help="Claude model ID to use for --qa (default: claude-haiku-4-5-20251001).",
+    )
+    parser.add_argument(
+        "--vision-qa",
+        action="store_true",
+        help="Run a Vision LLM pass after rendering to check if signatures obscure printed text, and resize them if they do.",
     )
 
     args = parser.parse_args()
@@ -852,20 +915,50 @@ def main() -> None:
                 field["mapped_value"] = qa_corrections[field["name"]]
                 field.setdefault("notes", []).append("[QA-corrected]")
 
+    if args.commit or args.commit_unsafe:
+        # Before we commit, if commit wasn't forced via --commit-unsafe, check for low confidences
+        if not args.commit_unsafe and dry_result["low_count"] > 0:
+            print(
+                f"Error: {dry_result['low_count']} low-confidence field(s) detected. "
+                "Use --resolve or --missing-mode to handle them, or --commit-unsafe "
+                "to fill them anyway.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+            
+        result = _fill_pdf(
+            template_pdf=args.template,
+            profile=profile,
+            index=index,
+            output_pdf=output_pdf,
+            dry_run=False,
+            skip_confidences=frozenset(),
+            field_overrides=qa_corrections or {},
+        )
+        
+        if args.vision_qa:
+            result = _run_vision_qa_pass(result, args.template, profile, index, output_pdf, qa_corrections or {})
+
+        if use_json:
+            print(json.dumps(result, indent=2))
+        else:
+            print(_render_human(result))
+        sys.exit(0)
+
     # --missing-mode: handle missing/low-confidence fields
     if args.missing_mode == "skip":
         _run_skip_mode(
             dry_result, args.template, profile, index, output_pdf, use_json,
             qa_corrections=qa_corrections,
+            run_vision_qa=args.vision_qa,
         )
         return  # always calls sys.exit()
-
-
 
     if args.missing_mode == "interview":
         _run_interview_mode(
             dry_result, args.template, profile, args.profile, index, output_pdf, use_json,
             qa_corrections=qa_corrections,
+            run_vision_qa=args.vision_qa,
         )
         return  # always calls sys.exit()
 

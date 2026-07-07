@@ -249,7 +249,7 @@ def _is_signature_date(norm_name: str, norm_alt: str) -> bool:
             return False
     # Match: "date", "date 2", "date_2" (already normalised — underscores → spaces)
     for s in (norm_name, norm_alt):
-        if re.fullmatch(r"date ?[\d]*", s.strip()):
+        if re.fullmatch(r"date ?[\d]*", s.strip()) or re.fullmatch(r"ddaatteedd ?[\d]*", s.strip()):
             return True
     return False
 
@@ -266,6 +266,167 @@ def _is_emergency_contact_field(norm_name: str, norm_alt: str) -> str | None:
         # Default: name field
         return "name"
     return None
+
+
+def _is_signature_or_initials_field(
+    norm_name: str, norm_alt: str, adjacent_text: str, profile: dict, fill_state: dict | None = None, line_text: str = ""
+) -> tuple[str, str | None, str, list] | None:
+    """Detect if field is for signature or initials, and return (type, value, confidence, notes)."""
+    if _is_signature_date(norm_name, norm_alt):
+        return None
+
+    combined = f"{norm_name} {norm_alt}".lower()
+    adj_lower = adjacent_text.lower() if adjacent_text else ""
+    full_text = f"{combined} {adj_lower}"
+
+    entities = [
+        "tyler combs", "tyler c. combs", "clearcut capital", "ripple returns", 
+        "unicorns unlimited", "combslink", "tyler combs revocable trust",
+        "ttyylleerr ccoommbbss", "ttyylleerr cc ccoommbbss", "ttyylleerr cc.. ccoommbbss"
+    ]
+    
+    # Only treat as a signature line if the field is empty/underscore, or explicitly says signature/sign/initial,
+    # or the field label is EXACTLY the entity name.
+    explicit_sig_kws = bool(re.search(r'\bsignatures?\b|\bsign\b|\binitials?\b', full_text))
+    is_blank_line = bool(re.search(r'_+', combined))
+    exact_entity_label = any(ent == norm_name.strip() or ent == norm_alt.strip() for ent in entities)
+    
+    if not (explicit_sig_kws or is_blank_line or exact_entity_label):
+        return None
+        
+    is_initials = bool(re.search(r'\binitials?\b', full_text))
+    
+    confidence = "low"
+    notes = ["Signature/initials line detected. Please verify who should sign."]
+    
+    # PRIORITY RULES FOR SIGNATURE ASSIGNMENT:
+    # 1. EXPLICIT MATCH: If the text near the signature line explicitly names a known entity 
+    #    (e.g., "Tyler Combs", "Ripple Returns"), it is definitively that entity's signature.
+    # 2. CHILD/MINOR CONTEXT: If we are filling for a child profile (e.g. Charlotte):
+    #    - Any line labeled "Player" or "Participant" MUST BE SKIPPED (minors do not sign legally binding contracts).
+    #    - Any line labeled "Parent", "Guardian", "Mother", or "Father" is automatically filled with the Parent's signature.
+    # 3. GENERIC DEDUPLICATION: If a document has multiple generic signature lines (e.g., "Signature: _____"), 
+    #    we only confidently sign the FIRST one. Subsequent generic lines will default to "low" confidence (ASK) 
+    #    because placing two signatures from the same person on one document is extremely rare and 
+    #    requires explicit user approval.
+    # 4. EXPLICIT EXCLUSION: If we already found an EXPLICIT match for Tyler on this document, we skip any
+    #    additional generic signature lines completely, assuming they belong to a counterparty.
+    
+    explicit_match = any(ent in full_text for ent in entities)
+    
+    # Check Parent vs Player priority using line_text if available to prevent bleeding across lines
+    line_context = (f"{norm_name} {norm_alt} {line_text}").lower()
+    is_parent_line = "parent" in line_context or "guardian" in line_context or "mother" in line_context or "father" in line_context
+    is_player_label = "player" in line_context or "participant" in line_context
+    
+    profile_id = (profile.get("profile_id") or "").lower()
+    is_child = "charlotte" in profile_id or "fiona" in profile_id
+    
+    if explicit_match:
+        confidence = "high"
+        notes = ["Matched known entity in signature context."]
+        if fill_state is not None:
+            fill_state["explicit_entity_matched"] = True
+    elif is_child:
+        if is_player_label:
+            # If it explicitly says player/participant in the label, don't sign it!
+            confidence = "none"
+            notes = [f"Skipped player signature line because profile ({profile_id}) is a minor."]
+            return None
+        elif is_parent_line:
+            confidence = "high"
+            notes = [f"Matched parent/guardian signature for child profile ({profile_id})."]
+    else:
+        # Default: if there's no explicit entity match and we're Tyler, we'll tentatively sign, 
+        # but if an explicit entity match was ALREADY found on this document, we skip generic lines.
+        if fill_state is not None and fill_state.get("explicit_entity_matched"):
+            confidence = "none"
+            notes = ["Skipped generic signature line because an explicit Tyler Combs line was already found on this document."]
+            return None
+            
+    img_type = "INITIALS_IMAGE" if is_initials else "SIGNATURE_IMAGE"
+    
+    # Deduplication rule: Two signatures on the same document is extremely rare.
+    used = fill_state.get("used_signatures", set()) if fill_state else set()
+    
+    from lib import env as _env
+    profiles_dir = _env.profiles_dir()
+    img_name = "initials.png" if is_initials else "signature.png"
+    img_path = profiles_dir / "signature" / img_name
+    val = f"[{img_type}]:{img_path}"
+    
+    if img_type in used:
+        confidence = "low"
+        notes.append("Tyler's signature/initials were already used on this document. Second signature requires explicit approval.")
+        # We set val to None so it doesn't automatically fill under --commit-unsafe
+        val = None
+    
+    return (img_type, val, confidence, notes)
+
+
+# ---------------------------------------------------------------------------
+# Parent Name special resolver
+# ---------------------------------------------------------------------------
+
+def _is_parent_name_field(norm_name: str, norm_alt: str) -> bool:
+    """True when the field asks for parent/guardian printed name."""
+    patterns = ["parent name", "guardian name", "father's name", "mother's name", "parent/guardian name"]
+    for s in (norm_name, norm_alt):
+        if any(p in s for p in patterns):
+            if "signature" not in s and "sign" not in s:
+                return True
+    return False
+
+def _resolve_parent_name(
+    pdf_field_name: str, pdf_field_alt: str, profile: dict
+) -> dict:
+    profile_id = (profile.get("profile_id") or "").lower()
+    if "charlotte" in profile_id or "fiona" in profile_id:
+        return _make_result(
+            pdf_field_name, pdf_field_alt, "Tyler Combs", "high",
+            "parent name field for child profile",
+        )
+    return _make_result(
+        pdf_field_name, pdf_field_alt, None, "none",
+        "parent name field but profile is not a child",
+    )
+
+def _is_printed_name_field(norm_name: str, norm_alt: str, adjacent_text: str = "") -> bool:
+    """True when the field asks for a generic Printed Name or Signor."""
+    combined = f"{norm_name} {norm_alt} {adjacent_text}".lower()
+    if "signature" in combined or "sign here" in combined:
+        # Avoid overriding actual signature lines
+        # But wait, "signor" might have "sign" in it.
+        pass
+    
+    if "print name" in combined or "printed name" in combined or "signor" in combined or "print clearly" in combined or "name (print" in combined:
+        return True
+        
+    # If the label is just "Name" but it's adjacent to a signature block
+    if (norm_name == "name" or norm_alt == "name") and ("signature" in combined or "sign" in combined):
+        return True
+        
+    return False
+
+def _resolve_printed_name(
+    pdf_field_name: str, pdf_field_alt: str, profile: dict
+) -> dict:
+    profile_id = (profile.get("profile_id") or "").lower()
+    
+    # If it's a child's profile, usually they don't sign themselves unless it explicitly says "Player Name".
+    # But generic printed name next to signature is usually the person who signed (Tyler).
+    # Since Tyler signs as parent, the printed name should be Tyler Combs.
+    # If it explicitly says "Player Name", it should be the child.
+    name_to_print = "Tyler Combs"
+    
+    if ("charlotte" in profile_id or "fiona" in profile_id):
+        if "player" in pdf_field_name.lower() or "participant" in pdf_field_name.lower():
+            name_to_print = _resolve_and_format(profile, "identity.legal_name", None) or ""
+            
+    return _make_result(
+        pdf_field_name, pdf_field_alt, name_to_print, "high",
+        "printed name injection rule",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -561,9 +722,12 @@ def map_pdf_field(
     pdf_field_name: str,
     pdf_field_alt: str,
     resolved_profile: dict,
-    index: dict,
+    index: dict | None = None,
     today: date | None = None,
     section_hint: str | None = None,
+    adjacent_text: str = "",
+    fill_state: dict | None = None,
+    line_text: str = "",
 ) -> dict:
     """Map a PDF field to a profile value.
 
@@ -579,6 +743,28 @@ def map_pdf_field(
     # ------------------------------------------------------------------
     # 1. Special-field resolvers (run before synonym lookup)
     # ------------------------------------------------------------------
+
+    # Parent Name injection
+    if _is_parent_name_field(norm_name, norm_alt):
+        return _resolve_parent_name(pdf_field_name, pdf_field_alt, resolved_profile)
+        
+    # Printed Name injection
+    if _is_printed_name_field(norm_name, norm_alt, adjacent_text):
+        return _resolve_printed_name(pdf_field_name, pdf_field_alt, resolved_profile)
+
+    # Signature / Initials
+    print(f"DEBUG SIG_CALL: norm_name='{norm_name}', norm_alt='{norm_alt}', line_text='{line_text}'", file=sys.stderr)
+    sig_result = _is_signature_or_initials_field(norm_name, norm_alt, adjacent_text, resolved_profile, fill_state, line_text)
+    if sig_result:
+        img_type, val, conf, notes = sig_result
+        if conf == "high" and fill_state is not None:
+            if "used_signatures" not in fill_state:
+                fill_state["used_signatures"] = set()
+            fill_state["used_signatures"].add(img_type)
+        return _make_result(
+            pdf_field_name, pdf_field_alt, val, conf,
+            f"contextual signature rule ({img_type})", notes=notes
+        )
 
     # Emergency contact
     ec_subfield = _is_emergency_contact_field(norm_name, norm_alt)
