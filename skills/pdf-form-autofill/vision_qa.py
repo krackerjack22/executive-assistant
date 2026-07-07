@@ -1,7 +1,8 @@
-"""Vision LLM QA review to ensure signatures do not overlap text.
+"""Vision LLM QA review to ensure filled text is aligned and does not overlap.
 
-Sends rendered PDF pages containing signatures to a Gemini Vision model 
-to check if the signature obscures printed text. Returns scale corrections.
+Sends rendered PDF pages containing Navy Blue filled text to a Gemini Vision model
+to check if the text is properly aligned over underscores, doesn't bleed into labels,
+and signature images don't obscure printed text. Returns micro-adjustments or abbreviations.
 """
 
 from __future__ import annotations
@@ -14,57 +15,38 @@ from pathlib import Path
 _DEFAULT_MODEL = "gemini-2.5-flash"
 _API_TIMEOUT = 120
 
-
-def review_signatures(
-    fields: list[dict],
+def review_fills(
     rendered_pdf_path: Path,
     model: str = _DEFAULT_MODEL,
-) -> dict[str, str]:
-    """Call Gemini Vision to check for signature text overlaps.
+) -> list[dict]:
+    """Call Gemini Vision to check for text overlaps and misalignment.
 
     Args:
-        fields: The ``fields`` list from the dry_result or final fill result dict.
-        rendered_pdf_path: Path to the PDF that has signatures injected on it.
+        rendered_pdf_path: Path to the PDF that has text (Navy Blue) and signatures injected.
         model: Gemini model ID.
     
     Returns:
-        Mapping of ``{pdf_field_name: "[SIGNATURE_IMAGE:0.7]:/path..."}`` for corrections.
+        List of issue dicts containing 'label', 'issue_type', 'x_nudge', 'y_nudge', 'abbreviated_value', 'reason'.
     """
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        raise RuntimeError(
-            "GEMINI_API_KEY not set. Export it to use --vision-qa.\n"
-            "  export GEMINI_API_KEY=AIza..."
-        )
+        raise RuntimeError("GEMINI_API_KEY not set. Export it to use --vision-qa.")
 
     try:
         from google import genai
         from google.genai import types
         import PIL.Image
+        import pdfplumber
     except ImportError:
-        raise RuntimeError("google-genai and pillow packages are required for vision QA. uv pip install google-genai pillow")
+        raise RuntimeError("google-genai, pillow, and pdfplumber are required. uv pip install google-genai pillow pdfplumber")
 
-    # Find fields that have a signature/initials injected
-    sig_fields = {}
-    for f in fields:
-        val = str(f.get("mapped_value") or "")
-        if val.startswith("[SIGNATURE_IMAGE") or val.startswith("[INITIALS_IMAGE"):
-            sig_fields[f["name"]] = val
-            
-    if not sig_fields:
-        return {}
-
-    # Since we need to check the document, we'll convert all pages to images and send them.
-    import pdfplumber
     num_pages = 0
     with pdfplumber.open(str(rendered_pdf_path)) as pdf:
         num_pages = len(pdf.pages)
         
     client = genai.Client(api_key=api_key)
+    all_issues = []
     
-    corrections = {}
-    
-    # Process each page
     for i in range(num_pages):
         with pdfplumber.open(str(rendered_pdf_path)) as pdf:
             page = pdf.pages[i]
@@ -72,25 +54,25 @@ def review_signatures(
         
         prompt = (
             "You are a QA reviewer checking an automatically filled PDF form. "
-            "Examine this page image and perform four checks:\n\n"
-            "1. Signature Overlaps: If there are any hand-written signatures or initials, "
-            "check if they vertically overlap or obscure the printed text ABOVE the signature line. "
-            "It is completely fine if they cross the actual signature line itself, but they MUST NOT "
-            "obscure printed labels or paragraphs of text above the line.\n"
-            "If a signature or initials overlaps printed text unacceptably, identify the label next to or below it, "
-            "and suggest a scale factor between 0.5 and 0.9 to shrink it.\n\n"
-            "2. Missing Printed Names: Look for any empty blank lines labeled 'Printed Name', 'Print Name', 'Name', or 'Signor'. "
-            "If it is positioned directly next to or below a signature, it MUST be filled out with the typed name of the person who signed. "
-            "If you see a blank line for a printed name next to a signature, you must flag it as missing.\n\n"
-            "3. Missing Signatures: Look for any empty blank lines labeled 'Signature', 'Sign Here', or indicating a signature is required. "
-            "If a signature line is completely empty but appears it should have been signed based on context, you must flag it as missing.\n\n"
-            "4. General Text Overlaps: Check if any typed text (like names, dates, or other fill-ins) is overlapping with other printed text or lines in a way that makes it difficult to read.\n\n"
+            "All newly filled text has been colored **Navy Blue**, while the original form text is black.\n\n"
+            "Examine this page image and perform these checks:\n\n"
+            "1. Navy Blue Text Overlaps (Bleed): Check if any Navy Blue text bleeds into or overlaps the black printed labels. "
+            "If it does, suggest an 'x_nudge' or 'y_nudge' (in points) to move the Navy Blue text so it doesn't overlap. "
+            "If the Navy Blue text is simply too long to fit in the available blank space even if nudged, suggest a much shorter 'abbreviated_value' (e.g. 'OHP/CareOregon' instead of 'OHP (Oregon Health Plan) / CareOregon').\n\n"
+            "2. Navy Blue Text Alignment: Check if the Navy Blue text is floating too high above or sitting too far below its designated underscore line. "
+            "If it is misaligned vertically, suggest a 'y_nudge' (e.g., -4 to move it down 4 points, or 4 to move it up). "
+            "If it is misaligned horizontally (e.g., starting way past the colon or far before the underscore), suggest an 'x_nudge'.\n\n"
+            "3. Navy Blue Checkboxes: Check if any Navy Blue 'X' is placed far away from its intended box or underscore. If so, suggest x_nudge and y_nudge.\n\n"
+            "4. Signature Overlaps: If there are any hand-written signatures (which may be black or blue), check if they vertically obscure the printed black text ABOVE the signature line. "
+            "If they do, suggest a 'scale' factor between 0.5 and 0.9 to shrink the signature.\n\n"
             "Return your response ONLY as a JSON array of objects. Each object should represent one issue with these keys:\n"
-            '  "label": "the printed text near the issue"\n'
-            '  "issue_type": "overlap", "missing_name", "missing_signature", or "text_overlap"\n'
-            '  "recommended_scale": float (e.g. 0.7) (only if issue_type is overlap)\n'
-            '  "missing_value": "Tyler Combs" (only if issue_type is missing_name, guess the name if it is Tyler\'s signature)\n'
-            '  "reason": "explanation of what it overlapped or what is missing"\n\n'
+            '  "label": "the black printed text nearest the issue (e.g., \'Insurance Company:\')"\n'
+            '  "issue_type": "text_overlap", "misalignment", or "signature_overlap"\n'
+            '  "x_nudge": float (e.g., 5 to move right, -5 to move left) (optional)\n'
+            '  "y_nudge": float (e.g., 5 to move up, -5 to move down) (optional)\n'
+            '  "scale": float (e.g., 0.7) (only for signature_overlap)\n'
+            '  "abbreviated_value": "Short text" (optional, if text_overlap and nudging won\'t fix the length)\n'
+            '  "reason": "explanation of the issue"\n\n'
             "If no issues are found, return an empty JSON array []."
         )
         
@@ -105,7 +87,7 @@ def review_signatures(
             
             raw_text = resp.text
             if not raw_text:
-                raise RuntimeError("No text returned from Vision QA.")
+                continue
 
             # Extract JSON block
             if "```json" in raw_text:
@@ -116,49 +98,16 @@ def review_signatures(
                 json_str = raw_text.strip()
                 
             issues = json.loads(json_str)
-            
-            # Match issues back to our fields
             for issue in issues:
-                issue_type = issue.get("issue_type")
-                if issue_type == "overlap" or issue.get("overlap"):
-                    label = issue.get("label", "").lower()
-                    scale = issue.get("recommended_scale", 0.7)
-                    
-                    # Simple fuzzy match against sig_fields
-                    matched_field = None
-                    for fname, val in sig_fields.items():
-                        if label in fname.lower() or fname.lower() in label:
-                            matched_field = fname
-                            break
-                    
-                    # If substring fails, just use the first signature field on the document (fallback)
-                    if not matched_field and len(sig_fields) == 1:
-                        matched_field = list(sig_fields.keys())[0]
-                        
-                    if matched_field:
-                        orig_val = sig_fields[matched_field]
-                        # Rewrite to include scale: [SIGNATURE_IMAGE:0.7]:/path
-                        parts = orig_val.split("]:")
-                        if len(parts) == 2:
-                            # strip existing scale if any
-                            prefix = parts[0].split(":")[0] 
-                            new_val = f"{prefix}:{scale}]:{parts[1]}"
-                            corrections[matched_field] = new_val
-                            print(f"[Vision QA] Detected signature overlap for '{matched_field}'. Suggested scale: {scale}. Reason: {issue.get('reason')}")
-                elif issue_type == "missing_name":
-                    label = issue.get("label", "")
-                    val = issue.get("missing_value", "Tyler Combs")
-                    print(f"[Vision QA] Detected missing printed name for '{label}'. Suggested value: {val}. Reason: {issue.get('reason')}")
-                    # We inject a correction that will override any field matching this label
-                    corrections[label] = val
-                elif issue_type == "missing_signature":
-                    label = issue.get("label", "")
-                    print(f"[Vision QA] Detected missing signature for '{label}'. Reason: {issue.get('reason')}")
-                    # You could map this to a signature injection if desired, but for now we just flag it.
-                elif issue_type == "text_overlap":
-                    label = issue.get("label", "")
-                    print(f"[Vision QA] Detected text overlap for '{label}'. Reason: {issue.get('reason')}")
+                issue['page'] = i + 1
+                all_issues.append(issue)
+                print(f"[Vision QA] Page {i+1} - {issue.get('issue_type')} on '{issue.get('label')}': {issue.get('reason')}")
+                if issue.get('x_nudge') or issue.get('y_nudge'):
+                    print(f"  Suggested nudges: x={issue.get('x_nudge', 0)}, y={issue.get('y_nudge', 0)}")
+                if issue.get('abbreviated_value'):
+                    print(f"  Suggested abbreviation: {issue.get('abbreviated_value')}")
         except Exception as e:
             print(f"[Vision QA] Error processing page {i+1}: {e}")
             
-    return corrections
+    return all_issues
+

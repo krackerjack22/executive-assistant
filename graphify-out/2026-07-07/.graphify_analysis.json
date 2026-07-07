@@ -826,7 +826,7 @@
       "requirements_txt"
     ],
     "35": [
-      "agents_agents_agents_agents_md",
+      "agents_agents_agents_md",
       "claude_md",
       "graphify_tool"
     ],
@@ -1142,41 +1142,8 @@
       "why": "inferred connection - not explicitly stated in source; connects across different repos/directories"
     }
   ],
-  "questions": [
-    {
-      "type": "isolated_nodes",
-      "question": "What connects `Render addresses in various formats and detect subject-vs-third-party fields.`, `Render an address dict in the requested format.      Args:         address: dict`, `Return True if the field label refers to the profile holder's address.      Cons` to the rest of the system?",
-      "why": "256 weakly-connected nodes found - possible documentation gaps or missing edges."
-    },
-    {
-      "type": "low_cohesion",
-      "question": "Should `field_mapper.py` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.058469945355191254 - nodes in this community are weakly interconnected."
-    },
-    {
-      "type": "low_cohesion",
-      "question": "Should `profile_loader.py` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.05725490196078432 - nodes in this community are weakly interconnected."
-    },
-    {
-      "type": "low_cohesion",
-      "question": "Should `test_learning.py` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.04994192799070848 - nodes in this community are weakly interconnected."
-    },
-    {
-      "type": "low_cohesion",
-      "question": "Should `test_acroform_roundtrip.py` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.05 - nodes in this community are weakly interconnected."
-    },
-    {
-      "type": "low_cohesion",
-      "question": "Should `test_formatters.py` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.058029689608636977 - nodes in this community are weakly interconnected."
-    },
-    {
-      "type": "low_cohesion",
-      "question": "Should `preflight.py` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.07681365576102418 - nodes in this community are weakly interconnected."
-    }
-  ]
+  "tokens": {
+    "input": 10744,
+    "output": 1093
+  }
 }

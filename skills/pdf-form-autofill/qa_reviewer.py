@@ -108,6 +108,8 @@ Your task: identify only HIGH-CONFIDENCE contextual errors. Focus on:
    filled with the subject's own name/school/grade instead of a sibling's, that is an error.
 2. Wrong-person data in parent/guardian or emergency-contact sections — sections asking for
    an adult's information filled with the student's data.
+3. Phone Deduplication — If multiple phone fields exist (Home, Mobile) for the same person, ONLY one should be filled (prefer Mobile) unless both are explicitly required or there's no other place to enter the parent's mobile number. Suggest "null" for the extra phone fields (like Home Phone) if Mobile is already filled.
+4. Default Inference for Restrictions — If a restriction question (e.g., swimming, activities) is entirely missing an answer, and the profile does not explicitly list it as restricted, explicitly suggest answering "No" (or "X" next to "No").
 
 Do NOT flag:
 - Missing / skipped fields (value=None is intentional).
