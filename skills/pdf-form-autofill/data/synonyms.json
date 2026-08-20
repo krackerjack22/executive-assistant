@@ -10,6 +10,7 @@
     "legal name":             "identity.legal_name",
     "client legal name":      "identity.legal_name",
     "name":                   "identity.legal_name",
+    "name as shown on your income tax return": "identity.legal_name",
 
     "first name":             "identity.first_name",
     "legal first name":       "identity.first_name",
@@ -42,6 +43,9 @@
     "ssn":                    "vault_references.ssn",
     "social security":        "vault_references.ssn",
     "social security number": "vault_references.ssn",
+    "taxpayer identification number ssn ein": "vault_references.ssn",
+    "taxpayer identification number": "vault_references.ssn",
+    "tin":                    "vault_references.ssn",
     "ssid":                   "vault_references.ssn",
     "ssidrow":                "vault_references.ssn",
     "state student id":       "vault_references.ssn",
@@ -115,6 +119,10 @@
     "job title":              "employment.title",
     "title":                  "employment.title",
     "official title":         "employment.title",
+    "sole proprietor":        "employment.is_self_employed",
+    "sole proprietor or individual": "employment.is_self_employed",
+    "individual sole proprietor": "employment.is_self_employed",
+    "self employed":          "employment.is_self_employed",
     "work address":           "employment.address.street_1",
     "employer address":       "employment.address.street_1",
     "employer phone":         "employment.phone"

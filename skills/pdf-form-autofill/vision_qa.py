@@ -1,113 +1,89 @@
-"""Vision LLM QA review to ensure filled text is aligned and does not overlap.
-
-Sends rendered PDF pages containing Navy Blue filled text to a Gemini Vision model
-to check if the text is properly aligned over underscores, doesn't bleed into labels,
-and signature images don't obscure printed text. Returns micro-adjustments or abbreviations.
-"""
-
-from __future__ import annotations
-
 import json
 import os
 import io
 from pathlib import Path
+from PIL import Image, ImageDraw
+import pypdfium2 as pdfium
+from google import genai
+from google.genai import types
 
-_DEFAULT_MODEL = "gemini-2.5-flash"
-_API_TIMEOUT = 120
-
-def review_fills(
-    rendered_pdf_path: Path,
-    model: str = _DEFAULT_MODEL,
-) -> list[dict]:
-    """Call Gemini Vision to check for text overlaps and misalignment.
-
-    Args:
-        rendered_pdf_path: Path to the PDF that has text (Navy Blue) and signatures injected.
-        model: Gemini model ID.
+def evaluate(
+    pdf_path: Path,
+    schema: list[dict],
+    field_results: list[dict],
+    debug_dir: Path | None = None
+) -> dict:
+    """Run the Vision QA loop to check filled PDF layout and missing fields."""
     
-    Returns:
-        List of issue dicts containing 'label', 'issue_type', 'x_nudge', 'y_nudge', 'abbreviated_value', 'reason'.
-    """
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        raise RuntimeError("GEMINI_API_KEY not set. Export it to use --vision-qa.")
-
-    try:
-        from google import genai
-        from google.genai import types
-        import PIL.Image
-        import pdfplumber
-    except ImportError:
-        raise RuntimeError("google-genai, pillow, and pdfplumber are required. uv pip install google-genai pillow pdfplumber")
-
-    num_pages = 0
-    with pdfplumber.open(str(rendered_pdf_path)) as pdf:
-        num_pages = len(pdf.pages)
-        
-    client = genai.Client(api_key=api_key)
-    all_issues = []
+    # 1. Rasterize PDF
+    pdf = pdfium.PdfDocument(str(pdf_path))
+    # We assume 1 page for now in the QA loop, but can easily loop later.
+    page = pdf[0]
     
-    for i in range(num_pages):
-        with pdfplumber.open(str(rendered_pdf_path)) as pdf:
-            page = pdf.pages[i]
-            img = page.to_image(resolution=150).original
-        
-        prompt = (
-            "You are a QA reviewer checking an automatically filled PDF form. "
-            "All newly filled text has been colored **Navy Blue**, while the original form text is black.\n\n"
-            "Examine this page image and perform these checks:\n\n"
-            "1. Navy Blue Text Overlaps (Bleed): Check if any Navy Blue text bleeds into or overlaps the black printed labels. "
-            "If it does, suggest an 'x_nudge' or 'y_nudge' (in points) to move the Navy Blue text so it doesn't overlap. "
-            "If the Navy Blue text is simply too long to fit in the available blank space even if nudged, suggest a much shorter 'abbreviated_value' (e.g. 'OHP/CareOregon' instead of 'OHP (Oregon Health Plan) / CareOregon').\n\n"
-            "2. Navy Blue Text Alignment: Check if the Navy Blue text is floating too high above or sitting too far below its designated underscore line. "
-            "If it is misaligned vertically, suggest a 'y_nudge' (e.g., -4 to move it down 4 points, or 4 to move it up). "
-            "If it is misaligned horizontally (e.g., starting way past the colon or far before the underscore), suggest an 'x_nudge'.\n\n"
-            "3. Navy Blue Checkboxes: Check if any Navy Blue 'X' is placed far away from its intended box or underscore. If so, suggest x_nudge and y_nudge.\n\n"
-            "4. Signature Overlaps: If there are any hand-written signatures (which may be black or blue), check if they vertically obscure the printed black text ABOVE the signature line. "
-            "If they do, suggest a 'scale' factor between 0.5 and 0.9 to shrink the signature.\n\n"
-            "Return your response ONLY as a JSON array of objects. Each object should represent one issue with these keys:\n"
-            '  "label": "the black printed text nearest the issue (e.g., \'Insurance Company:\')"\n'
-            '  "issue_type": "text_overlap", "misalignment", or "signature_overlap"\n'
-            '  "x_nudge": float (e.g., 5 to move right, -5 to move left) (optional)\n'
-            '  "y_nudge": float (e.g., 5 to move up, -5 to move down) (optional)\n'
-            '  "scale": float (e.g., 0.7) (only for signature_overlap)\n'
-            '  "abbreviated_value": "Short text" (optional, if text_overlap and nudging won\'t fix the length)\n'
-            '  "reason": "explanation of the issue"\n\n'
-            "If no issues are found, return an empty JSON array []."
-        )
-        
-        try:
-            resp = client.models.generate_content(
-                model=model,
-                contents=[img, prompt],
-                config=types.GenerateContentConfig(
-                    temperature=0.0,
-                )
-            )
-            
-            raw_text = resp.text
-            if not raw_text:
-                continue
-
-            # Extract JSON block
-            if "```json" in raw_text:
-                json_str = raw_text.split("```json")[1].split("```")[0].strip()
-            elif "```" in raw_text:
-                json_str = raw_text.split("```")[1].strip()
-            else:
-                json_str = raw_text.strip()
+    # We want a high-res image (e.g. scale=2.0)
+    pil_image = page.render(scale=2.0).to_pil()
+    pdf.close()
+    
+    # Coordinates from pypdfium2 are typically 72 DPI, so if we scale=2.0, we multiply coords by 2.
+    SCALE = 2.0
+    
+    # 2. Draw Red Bounding Boxes
+    draw = ImageDraw.Draw(pil_image)
+    for res in field_results:
+        if "rendered_bbox" in res:
+            b = res["rendered_bbox"]
+            if b["page"] == 1:
+                # Top-left and bottom-right
+                x0, y0 = b["x0"] * SCALE, b["y0"] * SCALE
+                x1, y1 = b["x1"] * SCALE, b["y1"] * SCALE
+                draw.rectangle([x0, y0, x1, y1], outline="red", width=3)
                 
-            issues = json.loads(json_str)
-            for issue in issues:
-                issue['page'] = i + 1
-                all_issues.append(issue)
-                print(f"[Vision QA] Page {i+1} - {issue.get('issue_type')} on '{issue.get('label')}': {issue.get('reason')}")
-                if issue.get('x_nudge') or issue.get('y_nudge'):
-                    print(f"  Suggested nudges: x={issue.get('x_nudge', 0)}, y={issue.get('y_nudge', 0)}")
-                if issue.get('abbreviated_value'):
-                    print(f"  Suggested abbreviation: {issue.get('abbreviated_value')}")
-        except Exception as e:
-            print(f"[Vision QA] Error processing page {i+1}: {e}")
-            
-    return all_issues
+    if debug_dir:
+        debug_dir.mkdir(parents=True, exist_ok=True)
+        pil_image.save(debug_dir / f"qa_debug_{pdf_path.name}.png")
+        
+    # 3. Call Gemini Vision
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    
+    prompt = f"""
+You are an expert QA Layout Verifier for automated PDF forms.
+I am providing you an image of a filled PDF form. 
+The system attempted to automatically fill the form based on a user's profile.
+I have drawn bright red boxes around every piece of text or checkbox that the system automatically injected.
 
+I am also providing you the original blank schema of fields that we found on this form:
+```json
+{json.dumps(schema, indent=2)}
+```
+
+Your job is to look at the image and the schema, and evaluate two things:
+1. **Missed Fields:** Are there checkboxes or fields on the visual form (like an Individual Checkbox) that the user profile should have triggered, but were missed? (Check the original schema to see what the label was).
+2. **Alignment:** Look at the text inside the red boxes. Is it bleeding out of its designated box or line? Does it need to be nudged up/down or left/right?
+
+Return a strictly formatted JSON object matching this schema:
+{{
+  "status": "perfect" | "needs_fixes",
+  "fixes": [
+    {{
+      "field_name": "Exact string from the schema",
+      "issue": "Brief description of why this is wrong.",
+      "manual_override_value": "If this was missed (like an empty checkbox), provide the exact string (e.g. 'X') to inject. Otherwise omit.",
+      "x_offset_nudge": 0,
+      "y_offset_nudge": 0 
+    }}
+  ]
+}}
+Note: y_offset_nudge is applied mathematically to a bottom-origin coordinate system. A positive y_offset moves the text UP. A negative y_offset moves the text DOWN. A positive x_offset moves the text RIGHT.
+If everything looks perfect and no fields are missing, return {{"status": "perfect"}}.
+    """
+    
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=[pil_image, prompt],
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            temperature=0.0
+        )
+    )
+    
+    return json.loads(response.text)

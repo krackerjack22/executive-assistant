@@ -8,10 +8,10 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import importlib.util
-spec = importlib.util.spec_from_file_location("spatial_mapper", str(Path(__file__).parent.parent / "skills/pdf-form-autofill/spatial_mapper.py"))
-spatial_mapper = importlib.util.module_from_spec(spec)
-sys.modules["spatial_mapper"] = spatial_mapper
-spec.loader.exec_module(spatial_mapper)
+spec = importlib.util.spec_from_file_location("anchor_mapper", str(Path(__file__).parent.parent / "skills/pdf-form-autofill/anchor_mapper.py"))
+anchor_mapper = importlib.util.module_from_spec(spec)
+sys.modules["anchor_mapper"] = anchor_mapper
+spec.loader.exec_module(anchor_mapper)
 
 template_path = Path("/Users/tylercombs/Downloads/RW Annual Information Form (1).pdf")
 output_path = Path("/Users/tylercombs/Downloads/RW Annual Information Form_Filled.pdf")
@@ -25,13 +25,14 @@ w0, h0 = float(page0_box.width), float(page0_box.height)
 w1, h1 = float(page1_box.width), float(page1_box.height)
 
 data_page1 = [
-    {"label": "Student's Name:", "text": "Charlotte Jean Combs", "page": 1},
+    {"label": "Last", "text": "Combs", "page": 1},
+    {"label": "First", "text": "Charlotte", "page": 1},
     {"label": "DOB:", "text": "12/04/2013", "page": 1},
     {"label": "Address:", "text": "5910 SW Rockwood Ct", "page": 1},
     {"label": "City:", "text": "Lake Oswego", "page": 1},
     {"label": "State:", "text": "OR", "page": 1},
     {"label": "Zip:", "text": "97035", "page": 1},
-    {"label": "Mobile Phone #:", "text": "971-202-3483", "page": 1},
+    {"label": "Mobile:", "text": "971-202-3483", "page": 1},
     {"label": "Mother's Name:", "text": "Lynsee Combs", "page": 1},
     {"label": "Father's Name:", "text": "Tyler Combs", "page": 1},
     {"label": "E-mail:", "text": "lynseecombs@gmail.com", "page": 1},
@@ -42,28 +43,27 @@ data_page1 = [
     {"label": "Policy #:", "text": "MH801N9B", "page": 1},
     {"label": "Group #:", "text": "None", "page": 1},
     {"label": "Physician:", "text": "Dr. Sivan Ben-David", "page": 1},
-    {"label": "Phone #:", "text": "503-691-9777", "page": 1},
+    {"label": "Phone#", "text": "503-691-9777", "page": 1},
     {"label": "Please list any known allergies (including allergies to medications):", "text": "Peanuts", "page": 1},
     {"label": "Please list any dietary restrictions and/or allergies:", "text": "No Peanuts", "page": 1},
     {"label": "YES (for special medication)", "text": "X", "page": 1, "is_checkbox": True},
-    {"label": "If “YES”, please identify the special medication(s):", "text": "Epinephrine, Albuterol, Fluoxetine", "page": 1},
+    {"label": "If “YES”, please identify the special medication(s):", "text": "Epinephrine, Albuterol, Fluoxetine", "page": 1, "force_rel": "below", "y_offset": 2},
     {"label": "Date of most recent tetanus shot, if know:", "text": "5/1/25", "page": 1},
     {"label": "Medical or health conditions or problems (asthma, diabetes, epilepsy, etc.):", "text": "Asthma, anxiety.", "page": 1},
     {"label": "YES (for over-the-counter medication)", "text": "X", "page": 1, "is_checkbox": True},
-    {"label": "NO (for swimming restrictions)", "text": "X", "page": 1, "is_checkbox": True},
-    {"label": "NO (for restrict the Student's participation)", "text": "X", "page": 1, "is_checkbox": True},
 ]
 
 data_page2 = [
+    {"label": "NO (for swimming restrictions)", "text": "X", "page": 2, "is_checkbox": True},
     {"label": "NO (for restrict participation on page 2)", "text": "X", "page": 2, "is_checkbox": True},
     {"label": "I DO NOT (give permission to record likeness)", "text": "X", "page": 2, "is_checkbox": True},
-    {"label": "Date:", "text": datetime.now().strftime("%m/%d/%Y"), "page": 2},
+    {"label": "Deate::", "text": datetime.now().strftime("%m/%d/%Y"), "page": 2},
     {"label": "Printed Name:", "text": "Tyler Combs", "page": 2},
 ]
 
 # Fetch coordinates
-print("Fetching spatial coordinates from Gemini 1.5 Flash...")
-coords = spatial_mapper.get_spatial_coordinates(template_path, data_page1 + data_page2)
+print("Fetching anchor coordinates from PDF OCR...")
+coords = anchor_mapper.get_anchor_coordinates(template_path, data_page1 + data_page2)
 
 # Merge coordinates back into data
 for f in data_page1 + data_page2:
@@ -126,7 +126,7 @@ def create_overlay(data, w, h, add_signature=False):
 
 # Add signature to data_page2 to get its box!
 data_page2.append({"label": "Parent/Guardian Signature:", "text": "[SIG]", "page": 2, "is_sig": True})
-coords_sig = spatial_mapper.get_spatial_coordinates(template_path, [{"label": "Parent/Guardian Signature:", "page": 2}])
+coords_sig = anchor_mapper.get_anchor_coordinates(template_path, [{"label": "Parent/Guardian Signature:", "page": 2}])
 if "Parent/Guardian Signature:" in coords_sig:
     sig_c = coords_sig["Parent/Guardian Signature:"]
     # append it to data_page2 so create_overlay can handle it
@@ -158,7 +158,7 @@ def create_overlay_p2(data, w, h):
             
         if f.get("is_sig"):
             # signature needs to move down slightly based on scale so it sits on the line
-            c.drawImage(signature_path, x, y - 10, width=70, height=21, mask='auto')
+            c.drawImage(signature_path, x, y - 10, width=150, height=35, preserveAspectRatio=True, anchor='sw', mask='auto')
             continue
             
         font_size = 11

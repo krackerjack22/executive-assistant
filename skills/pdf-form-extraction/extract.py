@@ -51,7 +51,6 @@ def extract(pdf_path: Path, target_profile_id: str | None = None) -> dict:
         raw_fields = _inspect.get_acroform_fields(pdf_path)
         for f in raw_fields:
             val = f.get("value")
-            # Strip pypdf type wrappers
             if hasattr(val, "get_object"):
                 val = str(val.get_object())
             elif val is not None:
@@ -64,6 +63,22 @@ def extract(pdf_path: Path, target_profile_id: str | None = None) -> dict:
                 "value": val,
                 "confidence": confidence,
             })
+    else:
+        # If it's flattened, use the new AI layout schema extractor!
+        import schema_extractor
+        schema = schema_extractor.get_or_create_schema(pdf_path)
+        for item in schema:
+            label = item.get("label")
+            if label:
+                # We don't have filled values for flattened PDFs in this flow yet (that requires a VLM OCR pass)
+                # But this gets the schema blanks into the system!
+                fields.append({
+                    "name": label,
+                    "alt": label,
+                    "field_type": "checkbox" if item.get("is_checkbox") else "text",
+                    "value": None,
+                    "confidence": "empty"
+                })
 
     spatial_map = _inspect.get_spatial_map(pdf_path)
 

@@ -705,32 +705,75 @@ def _run_vision_qa_pass(
     existing_overrides: dict,
 ) -> dict:
     import vision_qa
-    print("\n[Vision QA] Running LLM signature overlap review — this may take a minute...")
-    try:
-        corrections = vision_qa.review_signatures(
-            initial_result["fields"], output_pdf
-        )
-    except RuntimeError as exc:
-        print(f"[Vision QA] Skipped: {exc}", file=sys.stderr)
-        return initial_result
-
-    if not corrections:
-        print("[Vision QA] No overlapping signatures detected.")
-        return initial_result
-
-    print(f"\n[Vision QA] Detected {len(corrections)} overlapping signature(s). Re-rendering PDF...")
-    new_overrides = {**existing_overrides, **corrections}
+    import schema_extractor
+    print("\n[Vision QA] Running Self-Healing Vision QA Loop...")
     
-    result = _fill_pdf(
-        template_pdf=template_pdf,
-        profile=profile,
-        index=index,
-        output_pdf=output_pdf,
-        dry_run=False,
-        skip_confidences=_SKIP_CONFIDENCES if initial_result["skipped_count"] > 0 else frozenset(),
-        field_overrides=new_overrides,
-    )
-    return result
+    schema = schema_extractor.get_or_create_schema(template_pdf)
+    current_result = initial_result
+    current_overrides = dict(existing_overrides)
+    
+    for iteration in range(3):
+        print(f"\n[Vision QA] Pass {iteration + 1}/3 - Evaluating {output_pdf.name}...")
+        try:
+            qa_feedback = vision_qa.evaluate(
+                output_pdf, schema, current_result["fields"], debug_dir=Path(".tmp")
+            )
+        except Exception as exc:
+            print(f"[Vision QA] Error: {exc}", file=sys.stderr)
+            return current_result
+            
+        status = qa_feedback.get("status")
+        if status == "perfect":
+            print(f"[Vision QA] Status: PERFECT. No further adjustments needed.")
+            return current_result
+            
+        fixes = qa_feedback.get("fixes", [])
+        if not fixes:
+            print("[Vision QA] Status is not perfect, but no fixes provided.")
+            break
+            
+        print(f"[Vision QA] Applying {len(fixes)} visual fix(es)...")
+        for fix in fixes:
+            fname = fix.get("field_name")
+            if not fname: continue
+            
+            # Print the AI's reasoning
+            print(f"  -> Fixing [{fname}]: {fix.get('issue')}")
+            
+            # Fetch existing override (if any) or create new one
+            if fname not in current_overrides:
+                # Find the existing mapped_value from the result
+                mapped_val = None
+                for res in current_result["fields"]:
+                    if res["name"] == fname:
+                        mapped_val = res.get("mapped_value")
+                        break
+                current_overrides[fname] = {"value": mapped_val, "x_offset": 0, "y_offset": 0}
+            elif not isinstance(current_overrides[fname], dict):
+                current_overrides[fname] = {"value": current_overrides[fname], "x_offset": 0, "y_offset": 0}
+                
+            # Apply Nudges
+            if "x_offset_nudge" in fix:
+                current_overrides[fname]["x_offset"] += fix["x_offset_nudge"]
+            if "y_offset_nudge" in fix:
+                current_overrides[fname]["y_offset"] += fix["y_offset_nudge"]
+                
+            # Apply Manual Override (for missed checkboxes/fields)
+            if "manual_override_value" in fix and fix["manual_override_value"]:
+                current_overrides[fname]["value"] = fix["manual_override_value"]
+                
+        # Re-render the PDF with the nudges
+        current_result = _fill_pdf(
+            template_pdf=template_pdf,
+            profile=profile,
+            index=index,
+            output_pdf=output_pdf,
+            dry_run=False,
+            skip_confidences=_SKIP_CONFIDENCES if initial_result["skipped_count"] > 0 else frozenset(),
+            field_overrides=current_overrides,
+        )
+        
+    return current_result
 
 
 def main() -> None:
@@ -779,6 +822,11 @@ def main() -> None:
         "--json-output",
         action="store_true",
         help="Force JSON output for fill result.",
+    )
+    parser.add_argument(
+        "--qa-loop",
+        action="store_true",
+        help="Run the Self-Healing Vision QA loop to physically nudge text and check missed fields.",
     )
     parser.add_argument(
         "--missing-mode",
