@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -855,12 +856,29 @@ def main() -> None:
         help="Claude model ID to use for --qa (default: claude-haiku-4-5-20251001).",
     )
     parser.add_argument(
+        "--refresh-schema",
+        action="store_true",
+        help=(
+            "Ignore any cached field schema for this PDF and re-extract it. "
+            "Use after a pipeline change, or when a form was analyzed before "
+            "blank detection worked on it."
+        ),
+    )
+    parser.add_argument(
         "--vision-qa",
         action="store_true",
         help="Run a Vision LLM pass after rendering to check if signatures obscure printed text, and resize them if they do.",
     )
 
     args = parser.parse_args()
+
+    if args.refresh_schema:
+        # Read by schema_extractor; avoids threading the flag through every
+        # fill entry point.
+        os.environ["PDF_AUTOFILL_REFRESH_SCHEMA"] = "1"
+        # Blank geometry feeds schema extraction, so refreshing one without
+        # the other would re-extract from stale coordinates.
+        os.environ["PDF_AUTOFILL_REFRESH_BLANKS"] = "1"
 
     output_dir = args.output_dir or (
         args.template.parent if args.template else Path.cwd()

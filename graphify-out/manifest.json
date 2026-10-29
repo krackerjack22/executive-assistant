@@ -54,11 +54,6 @@
     "ast_hash": "7287be1a8c6fe196b351d7bf4f3688cb",
     "semantic_hash": "7287be1a8c6fe196b351d7bf4f3688cb"
   },
-  "patch_autofill.py": {
-    "mtime": 1782330689.031275,
-    "ast_hash": "a98d6fbfa6ddcf92d7ae5852cca2fcfc",
-    "semantic_hash": "a98d6fbfa6ddcf92d7ae5852cca2fcfc"
-  },
   "skills/Add2Calendar/references/openapi__calendar_gpt_webhook_option_a.json": {
     "mtime": 1781899936.5285766,
     "ast_hash": "c9f357562c84d5f174ea8fc20b064f6e",
@@ -80,9 +75,9 @@
     "semantic_hash": "e11b0ad320a48ae218cfa92d884e7c75"
   },
   "skills/pdf-form-autofill/autofill.py": {
-    "mtime": 1783374938.8331397,
-    "ast_hash": "229fa9f180a3a8551dfb2cc9d33b2b16",
-    "semantic_hash": "229fa9f180a3a8551dfb2cc9d33b2b16"
+    "mtime": 1783495353.1602626,
+    "ast_hash": "bdf25ee6e54e7294d963283c886595a3",
+    "semantic_hash": "bdf25ee6e54e7294d963283c886595a3"
   },
   "skills/pdf-form-autofill/data/field_context_rules.json": {
     "mtime": 1782069566.6290417,
@@ -90,9 +85,9 @@
     "semantic_hash": "4d9769e11aad5a11f828048709f2271f"
   },
   "skills/pdf-form-autofill/data/synonyms.json": {
-    "mtime": 1782419639.1851685,
-    "ast_hash": "cfc7691b71f2dcabfaf255711092483b",
-    "semantic_hash": "cfc7691b71f2dcabfaf255711092483b"
+    "mtime": 1783495708.2793138,
+    "ast_hash": "1d661bfcd65e20aed01168c30c56ba56",
+    "semantic_hash": "1d661bfcd65e20aed01168c30c56ba56"
   },
   "skills/pdf-form-autofill/emergency_contact.py": {
     "mtime": 1781915272.4722383,
@@ -115,9 +110,9 @@
     "semantic_hash": "572bc8680aa76bfd67f21f56a230183d"
   },
   "skills/pdf-form-autofill/overlay.py": {
-    "mtime": 1783400178.1900742,
-    "ast_hash": "fa85fd1f87f7317c689edd6cce0c6528",
-    "semantic_hash": "fa85fd1f87f7317c689edd6cce0c6528"
+    "mtime": 1783495672.9280431,
+    "ast_hash": "0f99102d1128ee8f226d6c9a948622a1",
+    "semantic_hash": "0f99102d1128ee8f226d6c9a948622a1"
   },
   "skills/pdf-form-autofill/qa_reviewer.py": {
     "mtime": 1783457936.1683123,
@@ -130,9 +125,9 @@
     "semantic_hash": "dd4e20e81087900889f0f0a4fcad5ff2"
   },
   "skills/pdf-form-extraction/extract.py": {
-    "mtime": 1782344451.3591728,
-    "ast_hash": "7f43fbb4120b189b496f8404e9be1fa5",
-    "semantic_hash": "7f43fbb4120b189b496f8404e9be1fa5"
+    "mtime": 1783492338.8018029,
+    "ast_hash": "41d4bb4697e13aa729bf981b9aa00e99",
+    "semantic_hash": "41d4bb4697e13aa729bf981b9aa00e99"
   },
   "skills/pdf-form-extraction/pdf_inspect.py": {
     "mtime": 1781907945.0197997,
@@ -239,75 +234,15 @@
     "ast_hash": "6d0133c5d4b639287fd652f0dd5c222b",
     "semantic_hash": "6d0133c5d4b639287fd652f0dd5c222b"
   },
-  "check_img.py": {
-    "mtime": 1783380634.1430306,
-    "ast_hash": "4780ad79bc1195b39bf66369f6e94e07",
-    "semantic_hash": "4780ad79bc1195b39bf66369f6e94e07"
-  },
-  "debug_fill.py": {
-    "mtime": 1783388056.2845376,
-    "ast_hash": "8b8619726980de6016fe15a17da59af0",
-    "semantic_hash": "8b8619726980de6016fe15a17da59af0"
-  },
-  "debug_lines.py": {
-    "mtime": 1783380662.961161,
-    "ast_hash": "5be9c3029da957944b6b85c72ea27467",
-    "semantic_hash": "5be9c3029da957944b6b85c72ea27467"
-  },
-  "debug_printed.py": {
-    "mtime": 1783381320.954022,
-    "ast_hash": "b434ca6ac252ab245d9ae56f3c58ec60",
-    "semantic_hash": "b434ca6ac252ab245d9ae56f3c58ec60"
-  },
-  "debug_y1.py": {
-    "mtime": 1783387777.189057,
-    "ast_hash": "affca1f722b5e414468ddf634190ec5f",
-    "semantic_hash": "affca1f722b5e414468ddf634190ec5f"
-  },
-  "fix_overlay.py": {
-    "mtime": 1783387927.9510565,
-    "ast_hash": "d32dce35e4416ee42e6b62a660be1d01",
-    "semantic_hash": "d32dce35e4416ee42e6b62a660be1d01"
-  },
-  "get_rect.py": {
-    "mtime": 1783404236.8630428,
-    "ast_hash": "729e6d8fa5c755e9c6327a5a268e2c83",
-    "semantic_hash": "729e6d8fa5c755e9c6327a5a268e2c83"
-  },
-  "get_rect2.py": {
-    "mtime": 1783404259.4266112,
-    "ast_hash": "2b5f9b4fed9f0c83959753c522f3e636",
-    "semantic_hash": "2b5f9b4fed9f0c83959753c522f3e636"
-  },
-  "inspect_acroform.py": {
-    "mtime": 1783380622.8290036,
-    "ast_hash": "e1e80b0b7d9bae270882a441fa31888c",
-    "semantic_hash": "e1e80b0b7d9bae270882a441fa31888c"
-  },
-  "inspect_img.py": {
-    "mtime": 1783380640.8142974,
-    "ast_hash": "6fba721a53ef37730e4374a9087f29b2",
-    "semantic_hash": "6fba721a53ef37730e4374a9087f29b2"
-  },
   "run_all_tests.sh": {
     "mtime": 1783378461.0184877,
     "ast_hash": "01d86332d7f65ff414600e97141376e5",
     "semantic_hash": "01d86332d7f65ff414600e97141376e5"
   },
-  "run_single.py": {
-    "mtime": 1783385573.4740486,
-    "ast_hash": "6f6170508aca3b3e7374219ae60d4f89",
-    "semantic_hash": "6f6170508aca3b3e7374219ae60d4f89"
-  },
   "scripts/fill_rw_form.py": {
-    "mtime": 1783457934.782453,
-    "ast_hash": "c9f3754fab82aef592f31af669f98ea3",
-    "semantic_hash": "c9f3754fab82aef592f31af669f98ea3"
-  },
-  "skills/pdf-form-autofill/spatial_mapper.py": {
-    "mtime": 1783457949.3856647,
-    "ast_hash": "a4c6d848162b74ba3db843c768cbaa32",
-    "semantic_hash": "a4c6d848162b74ba3db843c768cbaa32"
+    "mtime": 1783481296.0371597,
+    "ast_hash": "f83a0c6b44194807f1edb32f3a2b0b41",
+    "semantic_hash": "f83a0c6b44194807f1edb32f3a2b0b41"
   },
   "skills/pdf-form-autofill/test_vision_mock.py": {
     "mtime": 1783374959.904821,
@@ -315,44 +250,9 @@
     "semantic_hash": "7b87d01880068984b4557d3a8ebafac5"
   },
   "skills/pdf-form-autofill/vision_qa.py": {
-    "mtime": 1783452491.1343381,
-    "ast_hash": "912d7d840941d6f2948759b802b2c18d",
-    "semantic_hash": "912d7d840941d6f2948759b802b2c18d"
-  },
-  "test_find_line.py": {
-    "mtime": 1783380679.6627102,
-    "ast_hash": "8772e336699cc7cdec90ac4e2f296868",
-    "semantic_hash": "8772e336699cc7cdec90ac4e2f296868"
-  },
-  "test_mapper.py": {
-    "mtime": 1783385582.1488814,
-    "ast_hash": "1af3721a7d911d5eba9626104fa52990",
-    "semantic_hash": "1af3721a7d911d5eba9626104fa52990"
-  },
-  "test_pdf.py": {
-    "mtime": 1783385495.4651954,
-    "ast_hash": "cbbbb507749d6762b089653b34b11220",
-    "semantic_hash": "cbbbb507749d6762b089653b34b11220"
-  },
-  "test_pdf2.py": {
-    "mtime": 1783385610.370406,
-    "ast_hash": "44afd1331de93fb0b7c66ca3df358206",
-    "semantic_hash": "44afd1331de93fb0b7c66ca3df358206"
-  },
-  "test_rarebird.py": {
-    "mtime": 1783380687.2098188,
-    "ast_hash": "19ef35126ca8acae26197dce5c2cceb7",
-    "semantic_hash": "19ef35126ca8acae26197dce5c2cceb7"
-  },
-  "test_reportlab.py": {
-    "mtime": 1783385725.5527997,
-    "ast_hash": "276ec88687ec47066d4b16dcf58390f9",
-    "semantic_hash": "276ec88687ec47066d4b16dcf58390f9"
-  },
-  "test_rl.py": {
-    "mtime": 1783385138.498958,
-    "ast_hash": "329a38a21fc55c6d74c7dc416e8b6688",
-    "semantic_hash": "329a38a21fc55c6d74c7dc416e8b6688"
+    "mtime": 1783495281.0193613,
+    "ast_hash": "1d58ded3102a522fbeb012a312277cca",
+    "semantic_hash": "1d58ded3102a522fbeb012a312277cca"
   },
   "README.md": {
     "mtime": 1781387822.0138843,
@@ -390,9 +290,9 @@
     "semantic_hash": "9bd67ed1f5b38dcc3b1eb7dcba31a0ee"
   },
   "skills/pdf-form-autofill/SKILL.md": {
-    "mtime": 1782451220.9920428,
-    "ast_hash": "97082f8125cdee254a5d91ddbd251873",
-    "semantic_hash": "97082f8125cdee254a5d91ddbd251873"
+    "mtime": 1787256899.0048196,
+    "ast_hash": "4615b768c55d6c6f65455eadbe59e3ed",
+    "semantic_hash": "4615b768c55d6c6f65455eadbe59e3ed"
   },
   "skills/pdf-form-extraction/SKILL.md": {
     "mtime": 1781910921.574992,
@@ -413,5 +313,150 @@
     "mtime": 1782344523.1556857,
     "ast_hash": "e4ac3b39509fac361254ae53ebc53439",
     "semantic_hash": "e4ac3b39509fac361254ae53ebc53439"
+  },
+  "diagnostic_layout.py": {
+    "mtime": 1783494571.0193346,
+    "ast_hash": "5a6cf62b017d671cc23accf034c16350",
+    "semantic_hash": "5a6cf62b017d671cc23accf034c16350"
+  },
+  "inspect_w9.py": {
+    "mtime": 1783494303.361615,
+    "ast_hash": "c5888046b34eb5bdee13e05cdb55c19d",
+    "semantic_hash": "c5888046b34eb5bdee13e05cdb55c19d"
+  },
+  "patch_extract.py": {
+    "mtime": 1783492338.7319582,
+    "ast_hash": "ee35bdabdd0e4cd6f4c54b341a0c18ad",
+    "semantic_hash": "ee35bdabdd0e4cd6f4c54b341a0c18ad"
+  },
+  "patch_layout.py": {
+    "mtime": 1783492998.7102654,
+    "ast_hash": "139049e875194249d279fe5b9af4f24f",
+    "semantic_hash": "139049e875194249d279fe5b9af4f24f"
+  },
+  "patch_overlay_fill.py": {
+    "mtime": 1783492288.8589685,
+    "ast_hash": "b8dae62832a3a0b413cc1c8a6f2b731d",
+    "semantic_hash": "b8dae62832a3a0b413cc1c8a6f2b731d"
+  },
+  "patch_overrides.py": {
+    "mtime": 1783493789.7915874,
+    "ast_hash": "6653900657d5881821ce229607ea695c",
+    "semantic_hash": "6653900657d5881821ce229607ea695c"
+  },
+  "patch_schema_env.py": {
+    "mtime": 1783492364.1740434,
+    "ast_hash": "f6981b8bd9d5fcfdfaa09aee0f4a03eb",
+    "semantic_hash": "f6981b8bd9d5fcfdfaa09aee0f4a03eb"
+  },
+  "patch_tools.py": {
+    "mtime": 1783494700.284288,
+    "ast_hash": "7fef99c71e184cce4d3d76f85ae01469",
+    "semantic_hash": "7fef99c71e184cce4d3d76f85ae01469"
+  },
+  "skills/pdf-form-autofill/anchor_mapper.py": {
+    "mtime": 1783494716.8651252,
+    "ast_hash": "2882475db80900a627fcbfd458517447",
+    "semantic_hash": "2882475db80900a627fcbfd458517447"
+  },
+  "skills/pdf-form-autofill/blanks_extractor.py": {
+    "mtime": 1783494692.3547533,
+    "ast_hash": "ac97d6181e443f2bc08c9c2a94e489f7",
+    "semantic_hash": "ac97d6181e443f2bc08c9c2a94e489f7"
+  },
+  "skills/pdf-form-autofill/layout_analyzer.py": {
+    "mtime": 1783494700.3134034,
+    "ast_hash": "6efc9fb1ad9d54b62e131437b591031e",
+    "semantic_hash": "6efc9fb1ad9d54b62e131437b591031e"
+  },
+  "skills/pdf-form-autofill/schema_extractor.py": {
+    "mtime": 1783492393.397814,
+    "ast_hash": "56513136fd146c6a65ccab8d4e1954c7",
+    "semantic_hash": "56513136fd146c6a65ccab8d4e1954c7"
+  },
+  ".agents/AGENTS.md": {
+    "mtime": 1787259108.053083,
+    "ast_hash": "b1f92461f4e2f2a58e55eca7a0380690",
+    "semantic_hash": "b1f92461f4e2f2a58e55eca7a0380690"
+  },
+  "CLAUDE.md": {
+    "mtime": 1783022665.4538853,
+    "ast_hash": "82efb97a359f5c7290bf2513d14686be",
+    "semantic_hash": "82efb97a359f5c7290bf2513d14686be"
+  },
+  "requirements.txt": {
+    "mtime": 1782344565.411963,
+    "ast_hash": "9a75c3a642a1aa60f4f5fb432950ff94",
+    "semantic_hash": "9a75c3a642a1aa60f4f5fb432950ff94"
+  },
+  "skills/Add2Calendar/references/custom_gpt__calendar_integration.md": {
+    "mtime": 1781899936.5267017,
+    "ast_hash": "78c7659a8ef61a5caf46897a43319cf5",
+    "semantic_hash": "78c7659a8ef61a5caf46897a43319cf5"
+  },
+  "skills/Add2Calendar/references/custom_gpt__calendar_integration_final_raw_array.md": {
+    "mtime": 1781899936.52738,
+    "ast_hash": "21a6104db408afc934454588eb292e5c",
+    "semantic_hash": "21a6104db408afc934454588eb292e5c"
+  },
+  "skills/Add2Calendar/references/custom_gpt__calendar_integration_wrapped_data.md": {
+    "mtime": 1781899936.5277135,
+    "ast_hash": "c09fb1cd04198bad4f8c95bd6e4e9173",
+    "semantic_hash": "c09fb1cd04198bad4f8c95bd6e4e9173"
+  },
+  "skills/summer-camp-scheduler/references/Summer_Camps_2026_Selected.html": {
+    "mtime": 1781899936.5147521,
+    "ast_hash": "f70c62d914ca751ceda7699e02356718",
+    "semantic_hash": "f70c62d914ca751ceda7699e02356718"
+  },
+  "skills/summer-camp-scheduler/references/calendar_assistant_sop.md": {
+    "mtime": 1781899936.5158067,
+    "ast_hash": "6a8055f9df9cadbd9dab43750236ac55",
+    "semantic_hash": "6a8055f9df9cadbd9dab43750236ac55"
+  },
+  "skills/Add2Calendar/references/Calendar_Agent_SOP.pdf": {
+    "mtime": 1781899936.5245285,
+    "ast_hash": "ecd1d313c937cbf53f125483070df9c5",
+    "semantic_hash": "ecd1d313c937cbf53f125483070df9c5"
+  },
+  "skills/Add2Calendar/references/XC_Calendar_Agent_Instructions.pdf": {
+    "mtime": 1781899936.5289335,
+    "ast_hash": "fe7f92ae3bd3ffe8447fd1f3a428fe60",
+    "semantic_hash": "fe7f92ae3bd3ffe8447fd1f3a428fe60"
+  },
+  "tests/fixtures/ambiguous_form.pdf": {
+    "mtime": 1781925752.32536,
+    "ast_hash": "995326f6c1f085bf7c5b51a6b1b0102d",
+    "semantic_hash": "995326f6c1f085bf7c5b51a6b1b0102d"
+  },
+  "tests/fixtures/btn_form.pdf": {
+    "mtime": 1781925752.3274035,
+    "ast_hash": "dc4d005127b654c05c35f51ea1b5b229",
+    "semantic_hash": "dc4d005127b654c05c35f51ea1b5b229"
+  },
+  "tests/fixtures/flattened_form.pdf": {
+    "mtime": 1781928364.851077,
+    "ast_hash": "a33d70b181718efd5f1f620da396786d",
+    "semantic_hash": "a33d70b181718efd5f1f620da396786d"
+  },
+  "tests/fixtures/ssn_form.pdf": {
+    "mtime": 1782169764.97438,
+    "ast_hash": "eba36e91ba0814e75d024ab8cf51d73a",
+    "semantic_hash": "eba36e91ba0814e75d024ab8cf51d73a"
+  },
+  "tests/fixtures/synthetic_form.pdf": {
+    "mtime": 1781925752.3247404,
+    "ast_hash": "0d487f0cd1cb39cc592e0580ef3d9837",
+    "semantic_hash": "0d487f0cd1cb39cc592e0580ef3d9837"
+  },
+  "tests/fixtures/two_page_form.pdf": {
+    "mtime": 1781925752.3266282,
+    "ast_hash": "1fbf8d7ffaa98fb188e9f50be8f3e478",
+    "semantic_hash": "1fbf8d7ffaa98fb188e9f50be8f3e478"
+  },
+  ".tmp/qa_debug_W-9_TylerCombs_Filled_QA.pdf.png": {
+    "mtime": 1783495755.2559962,
+    "ast_hash": "3ed523e0c3774279b49581cb8e07f363",
+    "semantic_hash": "3ed523e0c3774279b49581cb8e07f363"
   }
 }

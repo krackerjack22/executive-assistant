@@ -19,6 +19,16 @@ def normalize_text(s: str) -> str:
     s = s.replace("’", "'").replace("‘", "'")
     return s.strip().lower()
 
+# Distances in different directions are not interchangeable. A rule that
+# follows its label on the same line ("Name: ____") is the overwhelmingly
+# common form layout; a rule sitting ABOVE its label (a signature line with the
+# caption underneath) is rare. Ranking every candidate by raw distance lets a
+# 2pt vertical gap outrank a 3pt horizontal one, which walks a value onto the
+# previous row's label. These penalties keep the comparison honest while still
+# letting a clearly-closer blank win.
+_REL_PENALTY = {"right": 0.0, "below": 4.0, "above": 8.0}
+
+
 def find_best_blank(match, blanks, is_cb):
     if is_cb:
         candidates = [b for b in blanks if abs(b['top'] - match['top']) < 15 and (b['x1'] - b['x0']) < 25]
@@ -28,7 +38,13 @@ def find_best_blank(match, blanks, is_cb):
     else:
         candidates = []
         for b in blanks:
-            if b['x1'] - b['x0'] < 30: continue
+            # Exclude blanks that are structurally not text lines. This used
+            # to be a flat width >= 30 test, which silently discarded genuinely
+            # short rules (Grade, State, Zip) and sent those fields to a
+            # neighbouring line instead. Filtering by type is what that width
+            # test was actually approximating.
+            if b.get('type') in ('checkbox', 'segmented_cell'): continue
+            if b['x1'] - b['x0'] < 12: continue
             
             vert_dist = match['top'] - b['bottom']
             if -15 <= vert_dist <= 20 and max(b['x0'], match['x0']) < min(b['x1'], match['x1']):
@@ -41,7 +57,9 @@ def find_best_blank(match, blanks, is_cb):
                 candidates.append((b, b['top'] - match['bottom'], 'below'))
                 
         if candidates:
-            best = sorted(candidates, key=lambda x: x[1])[0]
+            best = sorted(
+                candidates, key=lambda c: c[1] + _REL_PENALTY.get(c[2], 0.0)
+            )[0]
             return best[0], best[2]
         return None, None
 

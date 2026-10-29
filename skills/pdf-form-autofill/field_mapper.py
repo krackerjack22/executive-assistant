@@ -115,7 +115,8 @@ def _normalize(text: str) -> str:
     """Lowercase, strip non-alpha/digit/space, collapse whitespace."""
     text = text.lower()
     text = re.sub(r"[^a-z0-9 ]", " ", text)
-    return re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"\s+", " ", text).strip()
+    return re.sub(r'\b(?:[a-z]\s+){2,}[a-z]\b', lambda m: m.group(0).replace(" ", ""), text)
 
 
 def _resolve_path(profile: dict, dot_path: str) -> str | None:

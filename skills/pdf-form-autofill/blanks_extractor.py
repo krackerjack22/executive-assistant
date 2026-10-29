@@ -1,12 +1,20 @@
 import pdfplumber
 
+# A page with fewer than this many vector blanks is treated as having no usable
+# vector geometry. Scanned pages usually yield exactly 0; a handful of stray
+# hits (a logo outline, a stamp) should not suppress the raster pass.
+_VECTOR_BLANK_FLOOR = 2
+
+
 def dedupe_chars(s: str) -> str:
     res = []
     for c in s:
         if not res or res[-1] != c: res.append(c)
     return "".join(res)
 
-def get_blanks(page):
+
+def get_vector_blanks(page):
+    """Blanks recoverable from the PDF's own vector graphics and text layer."""
     blanks = []
     
     # 1. page.rects (Lines, Checkboxes, Segmented Cells)
@@ -55,6 +63,40 @@ def get_blanks(page):
         w = current_group[-1]['x1'] - current_group[0]['x0']
         if w > 10:
             blanks.append({"x0": current_group[0]['x0'], "x1": current_group[-1]['x1'], "top": min(c['top'] for c in current_group), "bottom": max(c['bottom'] for c in current_group), "type": "underscore"})
+
+    return blanks
+
+
+def _page_source_path(page):
+    """Best-effort filesystem path backing a pdfplumber page, or None."""
+    return getattr(getattr(page.pdf, "stream", None), "name", None)
+
+
+def get_blanks(page, allow_vision: bool = True):
+    """Detect fill-in rules and checkboxes on a page.
+
+    Prefers the PDF's own vector geometry. When a page carries no usable vector
+    blanks -- the signature of a scanned or flattened-to-image form -- falls
+    back to locating the same geometry with Gemini vision. Both paths emit
+    identical dicts, so callers need not care which ran.
+    """
+    blanks = get_vector_blanks(page)
+
+    if allow_vision and len(blanks) < _VECTOR_BLANK_FLOOR:
+        source = _page_source_path(page)
+        if source:
+            try:
+                import vision_blanks
+
+                blanks = vision_blanks.detect_blanks(
+                    source,
+                    page.page_number,
+                    words=page.extract_words(),
+                )
+                for b in blanks:
+                    b["source"] = "vision"
+            except Exception as exc:  # pragma: no cover - diagnostics only
+                print(f"[Blanks Extractor] Vision fallback failed: {exc}")
 
     # Sort blanks by top, then left to right
     blanks.sort(key=lambda b: (b['top'], b['x0']))

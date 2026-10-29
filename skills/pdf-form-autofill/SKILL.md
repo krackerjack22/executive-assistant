@@ -138,6 +138,17 @@ If `low > 0` or missing fields exist, `--commit` will be refused unless a resolu
 - Pass `--missing-mode interview` to prompt the user interactively. 
   **CRITICAL**: When gathering user input during interview mode, if you are running as Claude Code, you must use the tool call `AskUserQuestion` to interact with the user.
 
+## Signatures & Images
+
+The `pdf-form-autofill` skill automatically maps and renders signature fields on flattened PDFs or standard AcroForms:
+
+- **Detection**: The mapper looks for fields containing "signature", "sign", or "initials". 
+- **Minors**: If a profile is for a minor, the skill will skip the minor's signature and instead prioritize placing the parent's signature on any "Parent/Guardian Signature" lines.
+- **Rendering**: Instead of placing raw text, the skill sets the field value to `[SIGNATURE_IMAGE]` (or `[INITIALS_IMAGE]`). At render time, the script intercepts this token and uses `reportlab` to draw the PNG signature image onto the document at the correct coordinates.
+- **Vision QA**: If signatures are overlapping text, pass `--vision-qa` when running `autofill.py`. This uses a Vision LLM pass after rendering to verify that signatures do not obscure printed text and automatically resizes them if they do.
+
+If a signature is missed, you can manually force the mapping using `--resolve` and setting the field value to `[SIGNATURE_IMAGE]`.
+
 ## CLI Reference
 
 ```bash
@@ -175,6 +186,29 @@ Run `python -c "import sys; sys.path.insert(0,'lib'); from lib import profile_lo
 - **Dry-run is the default.** `--commit` is required to write.
 - Inheritance is resolved automatically: Fiona's address → Tyler's address, Fiona's insurance → Tyler's policy.
 - `overlay.py` handles spatial fill for flattened PDFs containing text layers.
-- **OCR Policy:** For scanned (image-only) PDFs, do NOT build or install custom OCR tools (like Tesseract). Fail gracefully and either prompt the user to manually OCR the PDF using their own software, or if you are a vision-capable agent, offer to use your native vision capabilities to read the form.
+- **Scanned / image-only PDFs:** Handled automatically. When a page has no vector
+  rects/lines/curves (the signature of a scan), `blanks_extractor.get_blanks()` falls back to
+  `vision_blanks.detect_blanks()`, which renders the page and asks Gemini Flash to locate the
+  fill-in rules and checkboxes. Uses the same `google-genai` + `pypdfium2` path as `vision_qa`;
+  no new dependencies and no OCR engine.
+  - **Render resolution is the single most important setting.** At 150dpi Gemini mislocates
+    checkboxes by 40-100pt; at 300dpi (`DEFAULT_DPI`) the same model lands within ~1.5pt.
+    Do not lower it to save tokens.
+  - **Coordinates are verified against the text layer.** Gemini's grounding is unstable —
+    at temperature 0 the same page can come back correctly placed or shifted by tens of
+    points. Each detection is scored against pdfplumber's exact word boxes and re-requested
+    up to `MAX_ATTEMPTS` times; good runs score ~90%, bad runs ~10%. If none ground, the
+    coordinates are discarded rather than used, and anchoring degrades to label-relative
+    placement.
+  - **A text layer is still needed**, both for grounding and for field labels. If the PDF has
+    no text layer at all, OCR it first, then re-run with `--refresh-schema`.
+  - Do NOT build or install custom OCR tools (like Tesseract) from inside this skill. If a PDF
+    has no text layer, prompt the user to OCR it with their own software, or — if you are a
+    vision-capable agent — offer to read the form natively.
+  - Detection is cached per (file hash, page) under `~/.gemini/antigravity-ide/cache/blanks/`,
+    since a vision call is slow and billed. `--refresh-schema` clears it too.
+- **`--refresh-schema`:** Field schemas are cached by file hash. Pass `--refresh-schema` (or set
+  `PDF_AUTOFILL_REFRESH_SCHEMA=1`) to discard the cached schema and re-extract — needed after any
+  change to blank detection or the extraction prompt, since the file hash alone will not change.
 - **SSID fields:** Fields labeled "SSID", "SSIDRow", or "State Student ID" are mapped to `vault_references.ssn` and require Bitwarden to be unlocked. In a tty the script unlocks inline; in Claude Code the vault check step (step 4 above) handles prompting the user via `AskUserQuestion`.
 - **Profile completeness:** If a profile has `status: skeleton_partial`, some fields may return MISSING confidence. Fill out missing profile values first, then re-run the autofill. Fields most commonly incomplete on child profiles: `identity.last_name`, `identity.date_of_birth`, and `addresses.home` (resolved via `same_as_profile` from the primary parent's profile).

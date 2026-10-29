@@ -4,6 +4,9 @@ from blanks_extractor import get_blanks, dedupe_chars
 import sys
 from pathlib import Path
 
+# How far left of a blank to gather label words, in points.
+LEFT_LABEL_REACH = 120
+
 
 
 def analyze_pdf(pdf_path: str) -> dict:
@@ -17,7 +20,7 @@ def analyze_pdf(pdf_path: str) -> dict:
             for b in blanks:
                 labels_above = []
                 labels_below = []
-                labels_left = []
+                left_words = []
                 
                 for w in words:
                     # Clean the OCR text
@@ -27,17 +30,26 @@ def analyze_pdf(pdf_path: str) -> dict:
                     # Label Below (Line is above label)
                     if 0 <= w['top'] - b['bottom'] <= 15 and max(b['x0'], w['x0']) < min(b['x1'], w['x1']):
                         labels_below.append(text)
-                    # Label Left (Line is right of label)
-                    elif 0 <= b['x0'] - w['x1'] <= 25 and abs(b['bottom'] - w['bottom']) < 15:
-                        labels_left.append(text)
+                    # Label Left (Line is right of label). Collect the whole run
+                    # of words on this line, not just the adjacent one -- a
+                    # 25pt window turns "Student Name:" into "Name:", which is
+                    # ambiguous once a form has several Name fields.
+                    elif 0 <= b['x0'] - w['x1'] <= LEFT_LABEL_REACH and abs(b['bottom'] - w['bottom']) < 15:
+                        left_words.append((w['x0'], text))
                     # Label Above (Line is below label)
                     elif 0 <= b['top'] - w['bottom'] <= 25 and max(b['x0'], w['x0']) < min(b['x1'], w['x1']):
                         labels_above.append(text)
-                        
+                
+                labels_left = [t for _, t in sorted(left_words)]
+                
                 if labels_below or labels_left or labels_above:
                     page_results.append({
                         "blank_type": b["type"],
                         "width": round(b["x1"] - b["x0"], 1),
+                        # Coordinates let the extractor order fields and tell
+                        # apart repeated labels in different columns.
+                        "x0": round(b["x0"], 1),
+                        "top": round(b["top"], 1),
                         "labels_left": labels_left,
                         "labels_above": labels_above,
                         "labels_below": labels_below

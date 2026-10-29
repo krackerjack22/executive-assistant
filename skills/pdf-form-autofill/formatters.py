@@ -52,25 +52,8 @@ def format_phone(value: str) -> str:
 
 
 def format_grade(value: str, today: date | None = None) -> str:
-    """Return the current school grade, incrementing after June 15.
-
-    If today is on or after June 15, the stored grade (as of the end of
-    the previous school year) is bumped by one to reflect the upcoming
-    school year.
-    """
-    if not value:
-        return value
-    if today is None:
-        today = date.today()
-    cutoff = date(today.year, _GRADE_CUTOFF_MONTH, _GRADE_CUTOFF_DAY)
-    if today < cutoff:
-        return value  # school year still in progress — use stored grade
-    lower = value.strip().lower()
-    try:
-        idx = _GRADE_ORDER.index(lower)
-        return _GRADE_ORDER[idx + 1] if idx + 1 < len(_GRADE_ORDER) else "N/A"
-    except ValueError:
-        return value  # unknown format — return as stored
+    """Return the school grade exactly as stored in the profile."""
+    return value
 
 
 def format_today(today: date | None = None) -> str:
